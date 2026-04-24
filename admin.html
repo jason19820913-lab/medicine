@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>後台管理 · 線上處方集</title>
+<style>
+  :root {
+    --primary: #1e6091;
+    --primary-dark: #164872;
+    --danger: #dc2626;
+    --success: #16a34a;
+    --warning: #ea580c;
+    --bg: #f5f7fa;
+    --card: #fff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-mute: #64748b;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+
+  /* 登入畫面 */
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    padding: 20px;
+  }
+  .login-box {
+    background: #fff; padding: 40px; border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.15);
+    width: 100%; max-width: 380px;
+  }
+  .login-box h1 { margin: 0 0 8px; font-size: 22px; text-align: center; }
+  .login-box .sub { text-align: center; color: var(--text-mute); margin-bottom: 24px; font-size: 13px; }
+  .login-box .logo { text-align: center; font-size: 40px; margin-bottom: 8px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: var(--text-mute); margin-bottom: 4px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 14px; outline: none;
+    transition: border-color .15s, box-shadow .15s; background: #fff;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,96,145,.1);
+  }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: 6px; border: 1px solid transparent;
+    font-size: 14px; font-weight: 500; background: #f1f5f9; color: var(--text);
+  }
+  .btn:hover { background: #e2e8f0; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: .9; }
+  .btn-ghost { background: transparent; }
+  .btn-ghost:hover { background: #f1f5f9; }
+  .btn-full { width: 100%; padding: 11px; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 18px; }
+
+  /* 後台主畫面 */
+  .app { display: none; min-height: 100vh; }
+  .app.show { display: grid; grid-template-columns: 220px 1fr; }
+  @media (max-width: 768px) { .app.show { grid-template-columns: 1fr; } .sidebar { display: none; } }
+  .sidebar {
+    background: #0f172a; color: #cbd5e1; padding: 20px 0;
+    display: flex; flex-direction: column;
+  }
+  .sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .sidebar .brand h1 { font-size: 16px; color: #fff; margin: 0; }
+  .sidebar .brand .sub { font-size: 12px; opacity: .6; margin-top: 2px; }
+  .nav { flex: 1; padding: 16px 0; }
+  .nav a {
+    display: block; padding: 10px 20px; color: #cbd5e1; text-decoration: none;
+    font-size: 14px; border-left: 3px solid transparent;
+  }
+  .nav a:hover { background: rgba(255,255,255,.04); color: #fff; }
+  .nav a.active { background: rgba(255,255,255,.06); color: #fff; border-left-color: var(--primary); }
+  .user-info {
+    padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.08);
+    font-size: 13px;
+  }
+  .user-info .name { color: #fff; font-weight: 500; }
+  .user-info .role { font-size: 11px; opacity: .6; margin-top: 2px; }
+  .user-info .actions { margin-top: 10px; display: flex; gap: 8px; }
+  .user-info .actions a { color: #cbd5e1; font-size: 12px; cursor: pointer; }
+  .user-info .actions a:hover { color: #fff; }
+
+  .content { padding: 24px 30px; overflow-y: auto; }
+  .page-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+  }
+  .page-header h2 { margin: 0; font-size: 22px; }
+  .search-bar {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .search-bar input, .search-bar select {
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 14px; outline: none; min-width: 200px; background: #fff;
+  }
+  .table-wrap {
+    background: var(--card); border-radius: 8px; box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 12px; background: #f8fafc;
+    font-size: 13px; color: var(--text-mute); font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px; border-bottom: 1px solid var(--border); font-size: 14px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+  .photo-thumb {
+    width: 40px; height: 40px; border-radius: 4px; background: #f1f5f9;
+    display: inline-flex; align-items: center; justify-content: center;
+    overflow: hidden; font-size: 18px; color: var(--text-mute);
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 12px;
+  }
+  .badge-active { background: #dcfce7; color: #166534; }
+  .badge-inactive { background: #fee2e2; color: #991b1b; }
+  .badge-role-super { background: #fef3c7; color: #92400e; }
+  .badge-role-editor { background: #dbeafe; color: #1e40af; }
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text-mute);
+  }
+  .row-actions { display: flex; gap: 6px; }
+  .row-actions button {
+    padding: 5px 10px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border);
+    background: #fff;
+  }
+  .row-actions button:hover { background: #f1f5f9; }
+  .row-actions .del { color: var(--danger); }
+
+  /* modal */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(15,23,42,.6);
+    display: none; align-items: flex-start; justify-content: center;
+    z-index: 100; padding: 40px 20px; overflow-y: auto;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 10px; width: 100%; max-width: 700px;
+    animation: slide .2s ease-out;
+  }
+  @keyframes slide { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+  }
+  .modal-head h3 { margin: 0; font-size: 18px; }
+  .modal-head .close {
+    width: 32px; height: 32px; border-radius: 50%; border: none;
+    background: transparent; font-size: 20px; color: var(--text-mute);
+  }
+  .modal-head .close:hover { background: #f1f5f9; }
+  .modal-body { padding: 20px; }
+  .modal-foot {
+    display: flex; justify-content: flex-end; gap: 8px;
+    padding: 14px 20px; border-top: 1px solid var(--border);
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 20px; text-align: center; color: var(--text-mute);
+    cursor: pointer; font-size: 13px; background: #fafafa;
+  }
+  .drop-zone:hover { border-color: var(--primary); background: #f0f7ff; }
+  .drop-zone.has-photo { padding: 0; border-style: solid; }
+  .drop-zone img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 6px; }
+
+  /* toast */
+  .toast {
+    position: fixed; top: 20px; right: 20px; z-index: 1000;
+    background: #16a34a; color: #fff; padding: 12px 20px; border-radius: 6px;
+    box-shadow: 0 10px 20px rgba(0,0,0,.15);
+    transform: translateX(420px); transition: transform .25s;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.err { background: var(--danger); }
+  .toast.warn { background: var(--warning); }
+
+  /* loading */
+  .loading-full {
+    display: none; position: fixed; inset: 0; background: rgba(255,255,255,.7);
+    align-items: center; justify-content: center; z-index: 999;
+  }
+  .loading-full.show { display: flex; }
+  .spinner {
+    width: 36px; height: 36px; border: 4px solid #e2e8f0;
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- 登入畫面 -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="logo">💊</div>
+    <h1>處方集後台管理</h1>
+    <div class="sub">Drug Formulary Admin</div>
+    <form id="login-form">
+      <div class="field">
+        <label>帳號</label>
+        <input type="text" id="login-username" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>密碼</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">登入</button>
+      <div class="err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- 後台主介面 -->
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>💊 處方集後台</h1>
+      <div class="sub">Drug Formulary Admin</div>
+    </div>
+    <nav class="nav">
+      <a data-view="drugs" class="active">藥品管理</a>
+      <a data-view="categories">分類管理</a>
+      <a data-view="admins" id="nav-admins">管理員</a>
+      <a data-view="logs" id="nav-logs">操作紀錄</a>
+      <a href="index.html" target="_blank" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:14px;">↗ 前往前台</a>
+    </nav>
+    <div class="user-info">
+      <div class="name" id="u-name">—</div>
+      <div class="role" id="u-role">—</div>
+      <div class="actions">
+        <a onclick="openChangePwd()">修改密碼</a>
+        <a onclick="doLogout()">登出</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <!-- 藥品管理 -->
+    <div class="view" id="view-drugs">
+      <div class="page-header">
+        <h2>藥品管理</h2>
+        <button class="btn btn-primary" onclick="openDrugEdit()">＋ 新增藥品</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="drug-q" placeholder="搜尋：中文名 / 英文名 / 健保代碼...">
+        <select id="drug-cat-filter"><option value="">所有分類</option></select>
+        <select id="drug-status-filter">
+          <option value="">全部狀態</option>
+          <option value="active">啟用中</option>
+          <option value="inactive">已停用</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:56px"></th>
+            <th>中文名</th><th>英文名</th><th>健保代碼</th>
+            <th>分類</th><th>劑型</th><th>狀態</th><th style="width:140px"></th>
+          </tr></thead>
+          <tbody id="drug-tbody"></tbody>
+        </table>
+        <div class="empty-state hidden" id="drug-empty">尚無藥品資料</div>
+      </div>
+    </div>
+
+    <!-- 分類管理 -->
+    <div class="view hidden" id="view-categories">
+      <div class="page-header">
+        <h2>分類管理</h2>
+        <button class="btn btn-primary" onclick="openCatEdit()">＋ 新增分類</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>分類名稱</th><th>排序</th><th>建立時間</th><th style="width:140px"></th></tr></thead>
+          <tbody id="cat-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 管理員管理 -->
+    <div class="view hidden" id="view-admins">
+      <div class="page-header">
+        <h2>管理員管理</h2>
+        <button class="btn btn-primary" onclick="openAdminEdit()">＋ 新增管理員</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>帳號</th><th>顯示名稱</th><th>角色</th><th>狀態</th><th>最近登入</th><th style="width:140px"></th></tr></thead>
+          <tbody id="admin-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 操作紀錄 -->
+    <div class="view hidden" id="view-logs">
+      <div class="page-header">
+        <h2>操作紀錄</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>時間</th><th>管理員</th><th>動作</th><th>類型</th><th>目標</th><th>摘要</th></tr></thead>
+          <tbody id="log-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 藥品編輯 modal -->
+<div class="modal-mask" id="drug-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="drug-modal-title">新增藥品</h3>
+      <button class="close" onclick="closeModal('drug-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>藥品照片</label>
+        <div class="drop-zone" id="photo-drop">
+          <div id="photo-placeholder">點此或拖曳圖片上傳 (JPG/PNG)</div>
+          <img id="photo-preview" style="display:none;">
+          <input type="file" id="photo-input" accept="image/*" style="display:none;">
+        </div>
+        <input type="hidden" id="f-photo_url">
+        <input type="hidden" id="f-photo_file_id">
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>中文商品名 *</label><input id="f-name_zh" required></div>
+        <div class="field"><label>英文商品名</label><input id="f-name_en"></div>
+        <div class="field"><label>學名 Generic Name</label><input id="f-generic_name"></div>
+        <div class="field"><label>分類</label><select id="f-category"></select></div>
+        <div class="field"><label>健保代碼</label><input id="f-nhi_code"></div>
+        <div class="field"><label>院內/商品代碼</label><input id="f-product_code"></div>
+        <div class="field"><label>ATC Code</label><input id="f-atc_code"></div>
+        <div class="field"><label>製造廠商</label><input id="f-manufacturer"></div>
+        <div class="field"><label>劑型</label><input id="f-dosage_form" placeholder="錠劑 / 膠囊..."></div>
+        <div class="field"><label>含量</label><input id="f-strength" placeholder="100mg"></div>
+        <div class="field"><label>顏色</label><input id="f-color"></div>
+        <div class="field"><label>形狀</label><input id="f-shape"></div>
+        <div class="field"><label>標記 / 印字</label><input id="f-marking"></div>
+        <div class="field"><label>刻痕</label><input id="f-scoring"></div>
+      </div>
+      <div class="field"><label>適應症</label><textarea id="f-indications"></textarea></div>
+      <div class="field"><label>用法用量</label><textarea id="f-dosage"></textarea></div>
+      <div class="field"><label>副作用</label><textarea id="f-side_effects"></textarea></div>
+      <div class="field"><label>注意事項</label><textarea id="f-notes"></textarea></div>
+      <div class="field">
+        <label>狀態</label>
+        <select id="f-status">
+          <option value="active">啟用中</option>
+          <option value="inactive">已停用</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('drug-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveDrug()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 分類編輯 modal -->
+<div class="modal-mask" id="cat-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="cat-modal-title">新增分類</h3>
+      <button class="close" onclick="closeModal('cat-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>分類名稱 *</label><input id="cf-name" required></div>
+      <div class="field"><label>排序（數字越小越前）</label><input type="number" id="cf-sort_order" value="99"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('cat-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveCategory()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 管理員編輯 modal -->
+<div class="modal-mask" id="admin-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="admin-modal-title">新增管理員</h3>
+      <button class="close" onclick="closeModal('admin-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field"><label>帳號 *</label><input id="af-username" required></div>
+        <div class="field"><label>顯示名稱</label><input id="af-display_name"></div>
+        <div class="field"><label>密碼 <span id="pwd-hint" style="font-size:11px;color:#64748b;">(新建時必填)</span></label><input type="password" id="af-password"></div>
+        <div class="field"><label>角色</label>
+          <select id="af-role">
+            <option value="editor">編輯者（不能管理其他管理員）</option>
+            <option value="super_admin">超級管理員</option>
+          </select>
+        </div>
+        <div class="field"><label>狀態</label>
+          <select id="af-status">
+            <option value="active">啟用</option>
+            <option value="inactive">停用</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('admin-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveAdmin()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修改密碼 modal -->
+<div class="modal-mask" id="pwd-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>修改密碼</h3>
+      <button class="close" onclick="closeModal('pwd-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>舊密碼</label><input type="password" id="pf-old"></div>
+      <div class="field"><label>新密碼（至少 6 碼）</label><input type="password" id="pf-new"></div>
+      <div class="field"><label>再次輸入新密碼</label><input type="password" id="pf-new2"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('pwd-modal')">取消</button>
+      <button class="btn btn-primary" onclick="changePwd()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 共用 -->
+<div class="toast" id="toast"></div>
+<div class="loading-full" id="loading"><div class="spinner"></div></div>
+
+<script>
+  // ============ 設定（請修改）============
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyBurrw2JPcBLflnXHJnTsmbYtkwpNIiXWz9t-HZtxZtWHJ5Jyyxr1JzN9aGYf4MKeLIA/exec';
+  // =====================================
+
+  const TOKEN_KEY = 'drugfm_token';
+  let me = null;
+  let state = {
+    drugs: [], categories: [], admins: [], logs: [],
+    editingDrug: null, editingCat: null, editingAdmin: null,
+    currentView: 'drugs'
+  };
+
+  // ============ API ============
+  async function api(action, params = {}, method = 'POST') {
+    showLoading(true);
+    try {
+      const token = localStorage.getItem(TOKEN_KEY) || '';
+      const payload = Object.assign({ action, token }, params);
+      // 為避開 CORS preflight，使用 text/plain 並把資料放 body
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '請求失敗');
+      return data.data;
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ============ 登入 ============
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-err');
+    errEl.textContent = '';
+    try {
+      const data = await api('login', { username, password });
+      localStorage.setItem(TOKEN_KEY, data.token);
+      me = data.user;
+      enterApp();
+    } catch (err) {
+      errEl.textContent = err.message;
+    }
+  });
+
+  async function checkToken() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return false;
+    try {
+      me = await api('me');
+      return true;
+    } catch (err) {
+      localStorage.removeItem(TOKEN_KEY);
+      return false;
+    }
+  }
+
+  function enterApp() {
+    document.getElementById('login-wrap').style.display = 'none';
+    document.getElementById('app').classList.add('show');
+    document.getElementById('u-name').textContent = me.display_name || me.username;
+    document.getElementById('u-role').textContent = me.role === 'super_admin' ? '超級管理員' : '編輯者';
+    if (me.role !== 'super_admin') {
+      document.getElementById('nav-admins').style.display = 'none';
+      document.getElementById('nav-logs').style.display = 'none';
+    }
+    loadCategories();
+    loadDrugs();
+  }
+
+  async function doLogout() {
+    try { await api('logout'); } catch (e) {}
+    localStorage.removeItem(TOKEN_KEY);
+    location.reload();
+  }
+
+  // ============ 視圖切換 ============
+  document.querySelectorAll('.nav a[data-view]').forEach(a => {
+    a.addEventListener('click', () => switchView(a.dataset.view));
+  });
+
+  function switchView(view) {
+    state.currentView = view;
+    document.querySelectorAll('.nav a[data-view]').forEach(a => {
+      a.classList.toggle('active', a.dataset.view === view);
+    });
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    document.getElementById('view-' + view).classList.remove('hidden');
+    if (view === 'drugs') loadDrugs();
+    else if (view === 'categories') loadCategoriesTable();
+    else if (view === 'admins') loadAdmins();
+    else if (view === 'logs') loadLogs();
+  }
+
+  // ============ 藥品 ============
+  async function loadDrugs() {
+    try {
+      const data = await api('search', { q: '', limit: 2000, includeInactive: '1' });
+      state.drugs = data.items;
+      renderDrugs();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  function renderDrugs() {
+    const q = document.getElementById('drug-q').value.trim().toLowerCase();
+    const cat = document.getElementById('drug-cat-filter').value;
+    const st = document.getElementById('drug-status-filter').value;
+    let items = state.drugs.filter(d => {
+      if (cat && d.category !== cat) return false;
+      if (st && d.status !== st) return false;
+      if (!q) return true;
+      return ([d.name_zh, d.name_en, d.generic_name, d.nhi_code, d.product_code].join('|').toLowerCase()).indexOf(q) !== -1;
+    });
+    const tbody = document.getElementById('drug-tbody');
+    document.getElementById('drug-empty').classList.toggle('hidden', items.length > 0);
+    tbody.innerHTML = items.map(d => `
+      <tr>
+        <td><div class="photo-thumb">${d.photo_url ? `<img src="${esc(d.photo_url)}" onerror="this.style.display='none';this.parentElement.textContent='💊'">` : '💊'}</div></td>
+        <td><strong>${esc(d.name_zh || '')}</strong></td>
+        <td>${esc(d.name_en || '')}</td>
+        <td>${esc(d.nhi_code || '')}</td>
+        <td>${esc(d.category || '')}</td>
+        <td>${esc([d.dosage_form, d.strength].filter(Boolean).join(' '))}</td>
+        <td>${d.status === 'active'
+              ? '<span class="badge badge-active">啟用</span>'
+              : '<span class="badge badge-inactive">停用</span>'}</td>
+        <td><div class="row-actions">
+          <button onclick='openDrugEdit(${JSON.stringify(d.id)})'>編輯</button>
+          <button class="del" onclick='confirmDelDrug(${JSON.stringify(d.id)})'>停用</button>
+        </div></td>
+      </tr>
+    `).join('');
+  }
+
+  function openDrugEdit(id) {
+    state.editingDrug = id ? state.drugs.find(d => d.id === id) : null;
+    const d = state.editingDrug || {};
+    document.getElementById('drug-modal-title').textContent = id ? '編輯藥品' : '新增藥品';
+    ['name_zh','name_en','generic_name','category','nhi_code','product_code','atc_code',
+     'manufacturer','dosage_form','strength','color','shape','marking','scoring',
+     'indications','dosage','side_effects','notes','status','photo_url','photo_file_id']
+     .forEach(k => { const el = document.getElementById('f-' + k); if (el) el.value = d[k] || (k === 'status' ? 'active' : ''); });
+
+    // 分類下拉
+    const sel = document.getElementById('f-category');
+    sel.innerHTML = '<option value="">（未分類）</option>' +
+      state.categories.map(c => `<option value="${esc(c.name)}" ${c.name === d.category ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+
+    // 預覽圖
+    const img = document.getElementById('photo-preview');
+    const ph = document.getElementById('photo-placeholder');
+    if (d.photo_url) {
+      img.src = d.photo_url; img.style.display = ''; ph.style.display = 'none';
+      document.getElementById('photo-drop').classList.add('has-photo');
+    } else {
+      img.style.display = 'none'; ph.style.display = '';
+      document.getElementById('photo-drop').classList.remove('has-photo');
+    }
+
+    openModal('drug-modal');
+  }
+
+  async function saveDrug() {
+    const payload = {};
+    ['name_zh','name_en','generic_name','category','nhi_code','product_code','atc_code',
+     'manufacturer','dosage_form','strength','color','shape','marking','scoring',
+     'indications','dosage','side_effects','notes','status','photo_url','photo_file_id']
+     .forEach(k => payload[k] = document.getElementById('f-' + k).value);
+    if (!payload.name_zh) return toast('中文商品名必填', 'err');
+    if (state.editingDrug) payload.id = state.editingDrug.id;
+    try {
+      await api('saveDrug', { drug: payload });
+      closeModal('drug-modal');
+      toast('儲存成功');
+      loadDrugs();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelDrug(id) {
+    if (!confirm('確定要停用此藥品？（可到清單中重新啟用）')) return;
+    try {
+      await api('deleteDrug', { id });
+      toast('已停用');
+      loadDrugs();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // 照片上傳
+  const photoDrop = document.getElementById('photo-drop');
+  const photoInput = document.getElementById('photo-input');
+  photoDrop.addEventListener('click', () => photoInput.click());
+  photoDrop.addEventListener('dragover', e => { e.preventDefault(); photoDrop.style.borderColor = 'var(--primary)'; });
+  photoDrop.addEventListener('dragleave', () => { photoDrop.style.borderColor = ''; });
+  photoDrop.addEventListener('drop', e => {
+    e.preventDefault(); photoDrop.style.borderColor = '';
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  photoInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+  async function handleFile(file) {
+    if (!file.type.startsWith('image/')) return toast('請上傳圖片檔', 'err');
+    if (file.size > 5 * 1024 * 1024) return toast('檔案過大（上限 5MB）', 'err');
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result.split(',')[1];
+      try {
+        const data = await api('uploadPhoto', {
+          filename: file.name, contentType: file.type, base64
+        });
+        document.getElementById('f-photo_url').value = data.url;
+        document.getElementById('f-photo_file_id').value = data.fileId;
+        const img = document.getElementById('photo-preview');
+        img.src = data.url; img.style.display = '';
+        document.getElementById('photo-placeholder').style.display = 'none';
+        photoDrop.classList.add('has-photo');
+        toast('上傳成功');
+      } catch (err) { toast(err.message, 'err'); }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ============ 分類 ============
+  async function loadCategories() {
+    try {
+      state.categories = await api('listCategories');
+      // 填分類篩選
+      const filter = document.getElementById('drug-cat-filter');
+      filter.innerHTML = '<option value="">所有分類</option>' +
+        state.categories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+    } catch (err) {}
+  }
+
+  async function loadCategoriesTable() {
+    await loadCategories();
+    const tbody = document.getElementById('cat-tbody');
+    tbody.innerHTML = state.categories.map(c => `
+      <tr>
+        <td><strong>${esc(c.name)}</strong></td>
+        <td>${esc(c.sort_order)}</td>
+        <td>${formatDate(c.created_at)}</td>
+        <td><div class="row-actions">
+          <button onclick='openCatEdit(${JSON.stringify(c.id)})'>編輯</button>
+          <button class="del" onclick='confirmDelCat(${JSON.stringify(c.id)})'>刪除</button>
+        </div></td>
+      </tr>
+    `).join('');
+  }
+
+  function openCatEdit(id) {
+    state.editingCat = id ? state.categories.find(c => c.id === id) : null;
+    const c = state.editingCat || {};
+    document.getElementById('cat-modal-title').textContent = id ? '編輯分類' : '新增分類';
+    document.getElementById('cf-name').value = c.name || '';
+    document.getElementById('cf-sort_order').value = c.sort_order || 99;
+    openModal('cat-modal');
+  }
+
+  async function saveCategory() {
+    const name = document.getElementById('cf-name').value.trim();
+    if (!name) return toast('分類名稱必填', 'err');
+    const payload = { name, sort_order: parseInt(document.getElementById('cf-sort_order').value, 10) || 99 };
+    if (state.editingCat) payload.id = state.editingCat.id;
+    try {
+      await api('saveCategory', { category: payload });
+      closeModal('cat-modal');
+      toast('儲存成功');
+      loadCategoriesTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelCat(id) {
+    if (!confirm('確定要刪除此分類？（藥品分類欄位仍會保留原名稱字串）')) return;
+    try {
+      await api('deleteCategory', { id });
+      toast('已刪除');
+      loadCategoriesTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // ============ 管理員 ============
+  async function loadAdmins() {
+    try {
+      state.admins = await api('listAdmins');
+      const tbody = document.getElementById('admin-tbody');
+      tbody.innerHTML = state.admins.map(a => `
+        <tr>
+          <td><strong>${esc(a.username)}</strong></td>
+          <td>${esc(a.display_name || '')}</td>
+          <td><span class="badge ${a.role === 'super_admin' ? 'badge-role-super' : 'badge-role-editor'}">${a.role === 'super_admin' ? '超級管理員' : '編輯者'}</span></td>
+          <td>${a.status === 'active' ? '<span class="badge badge-active">啟用</span>' : '<span class="badge badge-inactive">停用</span>'}</td>
+          <td>${a.last_login_at ? formatDate(a.last_login_at) : '—'}</td>
+          <td><div class="row-actions">
+            <button onclick='openAdminEdit(${JSON.stringify(a.id)})'>編輯</button>
+            ${a.id === me.id ? '' : `<button class="del" onclick='confirmDelAdmin(${JSON.stringify(a.id)})'>停用</button>`}
+          </div></td>
+        </tr>
+      `).join('');
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  function openAdminEdit(id) {
+    state.editingAdmin = id ? state.admins.find(a => a.id === id) : null;
+    const a = state.editingAdmin || {};
+    document.getElementById('admin-modal-title').textContent = id ? '編輯管理員' : '新增管理員';
+    document.getElementById('af-username').value = a.username || '';
+    document.getElementById('af-username').disabled = !!id;
+    document.getElementById('af-display_name').value = a.display_name || '';
+    document.getElementById('af-password').value = '';
+    document.getElementById('pwd-hint').textContent = id ? '(留空則不變更)' : '(新建時必填)';
+    document.getElementById('af-role').value = a.role || 'editor';
+    document.getElementById('af-status').value = a.status || 'active';
+    openModal('admin-modal');
+  }
+
+  async function saveAdmin() {
+    const payload = {
+      username: document.getElementById('af-username').value.trim(),
+      display_name: document.getElementById('af-display_name').value.trim(),
+      role: document.getElementById('af-role').value,
+      status: document.getElementById('af-status').value
+    };
+    const pwd = document.getElementById('af-password').value;
+    if (pwd) payload.password = pwd;
+    if (state.editingAdmin) {
+      payload.id = state.editingAdmin.id;
+    } else {
+      if (!payload.password) return toast('新建時必須輸入密碼', 'err');
+    }
+    try {
+      await api('saveAdmin', { admin: payload });
+      closeModal('admin-modal');
+      toast('儲存成功');
+      loadAdmins();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelAdmin(id) {
+    if (!confirm('確定要停用此管理員？')) return;
+    try {
+      await api('deleteAdmin', { id });
+      toast('已停用');
+      loadAdmins();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // ============ 修改密碼 ============
+  function openChangePwd() {
+    document.getElementById('pf-old').value = '';
+    document.getElementById('pf-new').value = '';
+    document.getElementById('pf-new2').value = '';
+    openModal('pwd-modal');
+  }
+
+  async function changePwd() {
+    const oldPwd = document.getElementById('pf-old').value;
+    const newPwd = document.getElementById('pf-new').value;
+    const newPwd2 = document.getElementById('pf-new2').value;
+    if (newPwd.length < 6) return toast('新密碼至少 6 碼', 'err');
+    if (newPwd !== newPwd2) return toast('兩次新密碼不一致', 'err');
+    try {
+      await api('changePassword', { oldPassword: oldPwd, newPassword: newPwd });
+      closeModal('pwd-modal');
+      toast('密碼已更新');
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // ============ 操作紀錄 ============
+  async function loadLogs() {
+    try {
+      state.logs = await api('listLogs', { limit: 200 });
+      const tbody = document.getElementById('log-tbody');
+      tbody.innerHTML = state.logs.map(l => `
+        <tr>
+          <td>${formatDate(l.timestamp)}</td>
+          <td>${esc(l.admin_name || '')}</td>
+          <td>${esc(l.action || '')}</td>
+          <td>${esc(l.target_type || '')}</td>
+          <td>${esc(l.target_id || '')}</td>
+          <td>${esc(l.detail || '')}</td>
+        </tr>
+      `).join('');
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // ============ Helpers ============
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+  function showLoading(show) { document.getElementById('loading').classList.toggle('show', show); }
+  function esc(s) {
+    return (s == null ? '' : String(s))
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function formatDate(s) {
+    if (!s) return '';
+    try { return new Date(s).toLocaleString('zh-TW', { hour12: false }); }
+    catch (e) { return s; }
+  }
+  let toastTimer;
+  function toast(msg, type = 'ok') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type === 'err' ? ' err' : type === 'warn' ? ' warn' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // 篩選器事件
+  ['drug-q','drug-cat-filter','drug-status-filter'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderDrugs);
+    document.getElementById(id).addEventListener('change', renderDrugs);
+  });
+
+  // 初始化
+  (async () => {
+    if (await checkToken()) {
+      enterApp();
+    } else {
+      document.getElementById('login-username').focus();
+    }
+  })();
+</script>
+</body>
+</html>
