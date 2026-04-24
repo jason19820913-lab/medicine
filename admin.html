@@ -6,17 +6,18 @@
 <title>後台管理 · 線上處方集</title>
 <style>
   :root {
-    --primary: #1e6091;
-    --primary-dark: #164872;
+    --primary: #1FAE9F;
+    --primary-dark: #178478;
+    --primary-soft: #D4F0EC;
     --danger: #dc2626;
     --success: #16a34a;
     --warning: #ea580c;
-    --bg: #f5f7fa;
+    --bg: #F4F8F7;
     --card: #fff;
-    --border: #e2e8f0;
-    --text: #1e293b;
-    --text-mute: #64748b;
-    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --border: #DEE8E6;
+    --text: #0E3B37;
+    --text-mute: #6B8682;
+    --shadow: 0 1px 3px rgba(20,80,70,.06), 0 1px 2px rgba(20,80,70,.04);
   }
   * { box-sizing: border-box; }
   body {
@@ -40,7 +41,15 @@
   }
   .login-box h1 { margin: 0 0 8px; font-size: 22px; text-align: center; }
   .login-box .sub { text-align: center; color: var(--text-mute); margin-bottom: 24px; font-size: 13px; }
-  .login-box .logo { text-align: center; font-size: 40px; margin-bottom: 8px; }
+  .login-box .logo {
+    text-align: center; margin: -12px auto 12px;
+    width: 96px; height: 96px; border-radius: 50%;
+    background: var(--primary); padding: 8px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(31,174,159,.25);
+  }
+  .login-box .logo img { width: 100%; height: 100%; }
+  .login-box h1 { color: var(--primary-dark); }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; color: var(--text-mute); margin-bottom: 4px; }
   .field input, .field select, .field textarea {
@@ -72,12 +81,14 @@
   .app.show { display: grid; grid-template-columns: 220px 1fr; }
   @media (max-width: 768px) { .app.show { grid-template-columns: 1fr; } .sidebar { display: none; } }
   .sidebar {
-    background: #0f172a; color: #cbd5e1; padding: 20px 0;
+    background: linear-gradient(180deg, #0E3B37 0%, #0A2B28 100%); color: #B7D8D3; padding: 20px 0;
     display: flex; flex-direction: column;
   }
-  .sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08); }
-  .sidebar .brand h1 { font-size: 16px; color: #fff; margin: 0; }
-  .sidebar .brand .sub { font-size: 12px; opacity: .6; margin-top: 2px; }
+  .sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 10px; }
+  .sidebar .brand .logo-mini { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); padding: 3px; flex-shrink: 0; }
+  .sidebar .brand .logo-mini img { width: 100%; height: 100%; }
+  .sidebar .brand h1 { font-size: 15px; color: #fff; margin: 0; font-weight: 600; }
+  .sidebar .brand .sub { font-size: 11px; opacity: .6; margin-top: 2px; }
   .nav { flex: 1; padding: 16px 0; }
   .nav a {
     display: block; padding: 10px 20px; color: #cbd5e1; text-decoration: none;
@@ -176,6 +187,12 @@
     padding: 14px 20px; border-top: 1px solid var(--border);
   }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-sec {
+    font-size: 13px; margin: 20px 0 10px; color: var(--primary-dark);
+    padding: 6px 10px; background: var(--primary-soft); border-radius: 4px;
+    font-weight: 600;
+  }
+  .form-sec:first-of-type { margin-top: 8px; }
   @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
   .drop-zone {
     border: 2px dashed var(--border); border-radius: 8px;
@@ -218,8 +235,8 @@
 <!-- 登入畫面 -->
 <div class="login-wrap" id="login-wrap">
   <div class="login-box">
-    <div class="logo">💊</div>
-    <h1>處方集後台管理</h1>
+    <div class="logo"><img src="logo.png" alt="Elite Clinic"></div>
+    <h1>Elite Clinic 處方集</h1>
     <div class="sub">Drug Formulary Admin</div>
     <form id="login-form">
       <div class="field">
@@ -240,8 +257,11 @@
 <div class="app" id="app">
   <aside class="sidebar">
     <div class="brand">
-      <h1>💊 處方集後台</h1>
-      <div class="sub">Drug Formulary Admin</div>
+      <div class="logo-mini"><img src="logo.png" alt="Elite Clinic"></div>
+      <div>
+        <h1>處方集後台</h1>
+        <div class="sub">Elite Clinic · Admin</div>
+      </div>
     </div>
     <nav class="nav">
       <a data-view="drugs" class="active">藥品管理</a>
@@ -350,6 +370,7 @@
         <input type="hidden" id="f-photo_url">
         <input type="hidden" id="f-photo_file_id">
       </div>
+      <h4 class="form-sec">基本資料</h4>
       <div class="grid-2">
         <div class="field"><label>中文商品名 *</label><input id="f-name_zh" required></div>
         <div class="field"><label>英文商品名</label><input id="f-name_en"></div>
@@ -357,19 +378,41 @@
         <div class="field"><label>分類</label><select id="f-category"></select></div>
         <div class="field"><label>健保代碼</label><input id="f-nhi_code"></div>
         <div class="field"><label>院內/商品代碼</label><input id="f-product_code"></div>
-        <div class="field"><label>ATC Code</label><input id="f-atc_code"></div>
         <div class="field"><label>製造廠商</label><input id="f-manufacturer"></div>
         <div class="field"><label>劑型</label><input id="f-dosage_form" placeholder="錠劑 / 膠囊..."></div>
         <div class="field"><label>含量</label><input id="f-strength" placeholder="100mg"></div>
+      </div>
+
+      <h4 class="form-sec">外觀辨識</h4>
+      <div class="grid-2">
         <div class="field"><label>顏色</label><input id="f-color"></div>
         <div class="field"><label>形狀</label><input id="f-shape"></div>
         <div class="field"><label>標記 / 印字</label><input id="f-marking"></div>
         <div class="field"><label>刻痕</label><input id="f-scoring"></div>
       </div>
-      <div class="field"><label>適應症</label><textarea id="f-indications"></textarea></div>
-      <div class="field"><label>用法用量</label><textarea id="f-dosage"></textarea></div>
-      <div class="field"><label>副作用</label><textarea id="f-side_effects"></textarea></div>
-      <div class="field"><label>注意事項</label><textarea id="f-notes"></textarea></div>
+
+      <h4 class="form-sec">臨床資料</h4>
+      <div class="field"><label>藥物機轉 Mechanism of Action</label><textarea id="f-mechanism" placeholder="例：Alendronate 為 bisphosphonate 類藥物，可抑制破骨細胞活性..."></textarea></div>
+      <div class="field"><label>適應症 Indications</label><textarea id="f-indications"></textarea></div>
+      <div class="field"><label>用法用量 Dosage</label><textarea id="f-dosage"></textarea></div>
+      <div class="field"><label>極大量 Maximum Dose</label><textarea id="f-max_dose" placeholder="例：成人每日不超過 4 g（單次不超過 1 g）"></textarea></div>
+      <div class="field"><label>副作用 Side Effects</label><textarea id="f-side_effects"></textarea></div>
+      <div class="field"><label>禁忌症 Contraindications</label><textarea id="f-contraindications"></textarea></div>
+      <div class="field"><label>交互作用 Drug Interactions</label><textarea id="f-interactions"></textarea></div>
+      <div class="grid-2">
+        <div class="field">
+          <label>懷孕分級 Pregnancy Category</label>
+          <select id="f-pregnancy_category">
+            <option value="">—</option>
+            <option value="A">A</option><option value="B">B</option>
+            <option value="C">C</option><option value="D">D</option>
+            <option value="X">X</option><option value="N">N (未分級)</option>
+          </select>
+        </div>
+        <div class="field"><label>儲存條件 Storage</label><input id="f-storage" placeholder="室溫（15-30°C），避光"></div>
+      </div>
+      <div class="field"><label>健保給付規定</label><textarea id="f-nhi_rule"></textarea></div>
+      <div class="field"><label>其他注意事項</label><textarea id="f-notes"></textarea></div>
       <div class="field">
         <label>狀態</label>
         <select id="f-status">
@@ -602,9 +645,11 @@
     state.editingDrug = id ? state.drugs.find(d => d.id === id) : null;
     const d = state.editingDrug || {};
     document.getElementById('drug-modal-title').textContent = id ? '編輯藥品' : '新增藥品';
-    ['name_zh','name_en','generic_name','category','nhi_code','product_code','atc_code',
+    ['name_zh','name_en','generic_name','category','nhi_code','product_code',
      'manufacturer','dosage_form','strength','color','shape','marking','scoring',
-     'indications','dosage','side_effects','notes','status','photo_url','photo_file_id']
+     'mechanism','indications','dosage','max_dose','side_effects',
+     'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
+     'status','photo_url','photo_file_id']
      .forEach(k => { const el = document.getElementById('f-' + k); if (el) el.value = d[k] || (k === 'status' ? 'active' : ''); });
 
     // 分類下拉
@@ -628,9 +673,11 @@
 
   async function saveDrug() {
     const payload = {};
-    ['name_zh','name_en','generic_name','category','nhi_code','product_code','atc_code',
+    ['name_zh','name_en','generic_name','category','nhi_code','product_code',
      'manufacturer','dosage_form','strength','color','shape','marking','scoring',
-     'indications','dosage','side_effects','notes','status','photo_url','photo_file_id']
+     'mechanism','indications','dosage','max_dose','side_effects',
+     'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
+     'status','photo_url','photo_file_id']
      .forEach(k => payload[k] = document.getElementById('f-' + k).value);
     if (!payload.name_zh) return toast('中文商品名必填', 'err');
     if (state.editingDrug) payload.id = state.editingDrug.id;

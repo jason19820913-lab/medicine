@@ -6,15 +6,16 @@
 <title>線上處方集查詢</title>
 <style>
   :root {
-    --primary: #1e6091;
-    --primary-dark: #164872;
-    --accent: #2ea36e;
-    --bg: #f5f7fa;
+    --primary: #1FAE9F;
+    --primary-dark: #178478;
+    --primary-soft: #D4F0EC;
+    --accent: #2DC7B5;
+    --bg: #F4F8F7;
     --card: #ffffff;
-    --border: #e2e8f0;
-    --text: #1e293b;
-    --text-mute: #64748b;
-    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --border: #DEE8E6;
+    --text: #0E3B37;
+    --text-mute: #6B8682;
+    --shadow: 0 1px 3px rgba(20,80,70,.06), 0 1px 2px rgba(20,80,70,.04);
   }
   * { box-sizing: border-box; }
   body {
@@ -35,9 +36,11 @@
   header h1 { font-size: 24px; font-weight: 600; margin: 0; }
   header .subtitle { font-size: 13px; opacity: .85; margin-top: 4px; }
   .logo-icon {
-    width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,.15);
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    width: 52px; height: 52px; border-radius: 50%; background: #fff; padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.12);
   }
+  .logo-icon img { width: 100%; height: 100%; }
   .search-hero {
     background: #fff;
     padding: 32px 20px;
@@ -88,7 +91,9 @@
     transition: background .15s;
   }
   .cat-list li:hover { background: #f1f5f9; }
+  .cat-list li:hover { background: var(--primary-soft); }
   .cat-list li.active { background: var(--primary); color: #fff; }
+  .cat-list li.active:hover { background: var(--primary-dark); }
   .toolbar {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 16px;
@@ -124,7 +129,7 @@
   .drug-card .info .name-en { font-size: 13px; color: var(--text-mute); margin-top: 2px; }
   .drug-card .info .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .chip {
-    font-size: 12px; background: #eef4fa; color: var(--primary);
+    font-size: 12px; background: var(--primary-soft); color: var(--primary-dark);
     padding: 2px 8px; border-radius: 12px;
   }
   .empty {
@@ -191,9 +196,9 @@
 
 <header>
   <div class="container brand">
-    <div class="logo-icon">💊</div>
+    <div class="logo-icon"><img src="logo.png" alt="Elite Clinic"></div>
     <div>
-      <h1 id="site-title">線上處方集查詢</h1>
+      <h1 id="site-title">Elite Clinic 處方集查詢</h1>
       <div class="subtitle">Drug Formulary Search</div>
     </div>
   </div>
@@ -201,7 +206,7 @@
 
 <section class="search-hero">
   <div class="search-box">
-    <input id="search-input" type="text" placeholder="輸入藥品中文名 / 英文名 / 學名 / 健保代碼..." autocomplete="off">
+    <input id="search-input" type="text" placeholder="輸入藥品中文名 / 英文名 / 學名 / 健保代碼 / 院內代碼..." autocomplete="off">
     <button class="search-btn" id="search-btn" aria-label="搜尋">🔍</button>
   </div>
   <div class="hint">支援模糊搜尋 · 可用分類瀏覽 · 點擊藥品卡查看完整說明</div>
@@ -239,7 +244,7 @@
 <script>
   // ============ 設定（請修改）============
   const API_URL = 'https://script.google.com/macros/s/AKfycbyBurrw2JPcBLflnXHJnTsmbYtkwpNIiXWz9t-HZtxZtWHJ5Jyyxr1JzN9aGYf4MKeLIA/exec';
-  const SITE_TITLE = '線上處方集查詢';
+  const SITE_TITLE = 'Elite Clinic 處方集查詢';
   // =====================================
 
   document.getElementById('site-title').textContent = SITE_TITLE;
@@ -337,7 +342,6 @@
           <div class="codes">
             ${d.nhi_code ? `<span class="chip">健保 ${escapeHtml(d.nhi_code)}</span>` : ''}
             ${d.product_code ? `<span class="chip">院內 ${escapeHtml(d.product_code)}</span>` : ''}
-            ${d.atc_code ? `<span class="chip">ATC ${escapeHtml(d.atc_code)}</span>` : ''}
             ${d.category ? `<span class="chip">${escapeHtml(d.category)}</span>` : ''}
           </div>
         </div>
@@ -347,9 +351,16 @@
         ${sec('製造廠商', d.manufacturer)}
         ${sec('顏色 / 形狀', [d.color, d.shape].filter(Boolean).join(' / '))}
         ${sec('標記 / 刻痕', [d.marking, d.scoring].filter(Boolean).join(' / '))}
-        ${sec('適應症', d.indications, true)}
-        ${sec('用法用量', d.dosage, true)}
-        ${sec('副作用', d.side_effects, true)}
+        ${sec('懷孕分級', d.pregnancy_category)}
+        ${sec('儲存條件', d.storage)}
+        ${sec('藥物機轉 Mechanism of Action', d.mechanism, true)}
+        ${sec('適應症 Indications', d.indications, true)}
+        ${sec('用法用量 Dosage', d.dosage, true)}
+        ${sec('極大量 Maximum Dose', d.max_dose, true)}
+        ${sec('副作用 Side Effects', d.side_effects, true)}
+        ${sec('禁忌症 Contraindications', d.contraindications, true)}
+        ${sec('交互作用 Drug Interactions', d.interactions, true)}
+        ${sec('健保給付規定', d.nhi_rule, true)}
         ${sec('注意事項', d.notes, true)}
       </div>
     `;
