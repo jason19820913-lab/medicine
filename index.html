@@ -244,27 +244,23 @@
     main { padding: 12px 14px 80px; }
     .layout { grid-template-columns: 1fr; gap: 12px; }
 
-    /* 分類改成水平捲動 chips */
+    /* 分類：依版面自動換行（多列） */
     aside {
-      padding: 4px 0; position: static;
+      padding: 0; position: static;
       background: transparent; box-shadow: none;
       max-height: none; overflow: visible; display: block;
     }
     aside h3 { display: none; }
-    .cat-scroll {
-      overflow: visible; padding: 0;
-    }
+    .cat-scroll { overflow: visible; padding: 0; }
     .cat-list {
-      display: flex; gap: 8px; overflow-x: auto;
-      padding: 4px 2px 8px; margin: 0 -14px; padding-left: 14px; padding-right: 14px;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      padding: 0; margin: 0;
     }
-    .cat-list::-webkit-scrollbar { display: none; }
     .cat-list li {
-      flex-shrink: 0; white-space: nowrap;
-      padding: 7px 14px; font-size: 13px;
+      flex: 0 0 auto;
+      padding: 6px 12px; font-size: 13px;
       background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px;
     }
     .cat-list li.active { border-color: var(--primary); }
 
@@ -272,14 +268,34 @@
     .toolbar .count { font-size: 13px; }
     .toolbar .admin-link { font-size: 12px; }
 
-    /* 結果卡：兩欄 */
-    .drug-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .drug-card .info { padding: 10px; }
-    .drug-card .info .name-zh { font-size: 14px; line-height: 1.3; }
-    .drug-card .info .name-en { font-size: 11px; }
-    .drug-card .info .meta { gap: 4px; margin-top: 8px; }
-    .drug-card .info .meta .chip { font-size: 10px; padding: 1px 6px; }
-    .drug-card .photo { aspect-ratio: 1; font-size: 32px; }
+    /* 結果卡：手機改成「左圖右資訊」橫式單欄，更易掃讀 */
+    .drug-grid { grid-template-columns: 1fr; gap: 8px; }
+    .drug-card {
+      flex-direction: row; align-items: stretch;
+      border-radius: 10px;
+    }
+    .drug-card .photo {
+      width: 92px; min-width: 92px; height: 92px;
+      aspect-ratio: auto;
+      font-size: 28px;
+      border-radius: 10px 0 0 10px;
+    }
+    .drug-card .info {
+      padding: 10px 12px; flex: 1; min-width: 0;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .drug-card .info .name-zh {
+      font-size: 14.5px; line-height: 1.3;
+      overflow: hidden; text-overflow: ellipsis;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .drug-card .info .name-en {
+      font-size: 11.5px; margin-top: 2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .drug-card .info .meta { gap: 4px; margin-top: 6px; }
+    .drug-card .info .meta .chip { font-size: 10.5px; padding: 1px 7px; }
+    .drug-card:hover { transform: none; }
 
     /* Modal：手機改成從下方滑出的 Bottom Sheet */
     .modal-mask {
@@ -316,9 +332,12 @@
 
   /* ============ 極小手機（≤ 360px）============ */
   @media (max-width: 360px) {
-    .drug-grid { grid-template-columns: 1fr; }
+    .drug-card .photo { width: 80px; min-width: 80px; height: 80px; }
+    .drug-card .info { padding: 8px 10px; }
+    .drug-card .info .name-zh { font-size: 13.5px; }
     .modal-header { grid-template-columns: 1fr; }
     .modal-photo { max-width: 180px; margin: 0 auto; }
+    .cat-list li { padding: 5px 10px; font-size: 12px; }
   }
 </style>
 </head>
