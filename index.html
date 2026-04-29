@@ -80,12 +80,32 @@
   @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } }
   aside {
     background: var(--card); border-radius: 10px; box-shadow: var(--shadow);
-    padding: 16px; height: fit-content; position: sticky; top: 20px;
+    padding: 0;
+    position: sticky; top: 20px;
+    max-height: calc(100vh - 40px);
+    display: flex; flex-direction: column;
+    overflow: hidden;
   }
   aside h3 {
-    font-size: 14px; margin: 0 0 12px; color: var(--text-mute);
+    flex-shrink: 0;
+    font-size: 14px; margin: 0; color: var(--text-mute);
     text-transform: uppercase; letter-spacing: .5px; font-weight: 600;
+    padding: 16px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
   }
+  .cat-scroll {
+    overflow-y: auto;
+    padding: 8px;
+    flex: 1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-soft) transparent;
+  }
+  .cat-scroll::-webkit-scrollbar { width: 6px; }
+  .cat-scroll::-webkit-scrollbar-thumb {
+    background: var(--primary-soft); border-radius: 3px;
+  }
+  .cat-scroll::-webkit-scrollbar-thumb:hover { background: var(--primary); }
   .cat-list { list-style: none; padding: 0; margin: 0; }
   .cat-list li {
     padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;
@@ -191,6 +211,115 @@
     border-radius: 50%; animation: spin .8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============ RWD：平板（≤ 1024px）============ */
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 200px 1fr; gap: 16px; }
+    .drug-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  }
+
+  /* ============ RWD：手機（≤ 768px）============ */
+  @media (max-width: 768px) {
+    header { padding: 14px 0; }
+    .container { padding: 0 14px; }
+    header .brand { gap: 10px; }
+    header h1 { font-size: 17px; }
+    header .subtitle { font-size: 11px; }
+    .logo-icon { width: 44px; height: 44px; padding: 3px; }
+
+    /* 搜尋區壓縮且 sticky */
+    .search-hero {
+      padding: 14px 14px;
+      position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 2px 8px rgba(20,80,70,.06);
+    }
+    .search-box input {
+      font-size: 16px; padding: 12px 48px 12px 16px;
+      border-radius: 24px;
+      /* 防止 iOS 縮放 */
+    }
+    .search-box .search-btn { width: 38px; height: 38px; right: 4px; }
+    .hint { font-size: 11px; margin-top: 8px; line-height: 1.4; }
+
+    main { padding: 12px 14px 80px; }
+    .layout { grid-template-columns: 1fr; gap: 12px; }
+
+    /* 分類改成水平捲動 chips */
+    aside {
+      padding: 4px 0; position: static;
+      background: transparent; box-shadow: none;
+      max-height: none; overflow: visible; display: block;
+    }
+    aside h3 { display: none; }
+    .cat-scroll {
+      overflow: visible; padding: 0;
+    }
+    .cat-list {
+      display: flex; gap: 8px; overflow-x: auto;
+      padding: 4px 2px 8px; margin: 0 -14px; padding-left: 14px; padding-right: 14px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .cat-list::-webkit-scrollbar { display: none; }
+    .cat-list li {
+      flex-shrink: 0; white-space: nowrap;
+      padding: 7px 14px; font-size: 13px;
+      background: var(--card); border: 1px solid var(--border);
+    }
+    .cat-list li.active { border-color: var(--primary); }
+
+    .toolbar { margin-bottom: 12px; }
+    .toolbar .count { font-size: 13px; }
+    .toolbar .admin-link { font-size: 12px; }
+
+    /* 結果卡：兩欄 */
+    .drug-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .drug-card .info { padding: 10px; }
+    .drug-card .info .name-zh { font-size: 14px; line-height: 1.3; }
+    .drug-card .info .name-en { font-size: 11px; }
+    .drug-card .info .meta { gap: 4px; margin-top: 8px; }
+    .drug-card .info .meta .chip { font-size: 10px; padding: 1px 6px; }
+    .drug-card .photo { aspect-ratio: 1; font-size: 32px; }
+
+    /* Modal：手機改成從下方滑出的 Bottom Sheet */
+    .modal-mask {
+      padding: 0; align-items: flex-end;
+    }
+    .modal {
+      max-height: 92vh; border-radius: 18px 18px 0 0;
+      animation: slideUp .25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal::before {
+      content: ""; display: block; width: 40px; height: 4px;
+      background: #cbd5d3; border-radius: 2px;
+      margin: 8px auto 0;
+    }
+    .modal-close { top: 8px; right: 12px; width: 32px; height: 32px; }
+    .modal-content { padding: 18px 18px 30px; }
+    .modal-header { grid-template-columns: 100px 1fr; gap: 14px; padding-bottom: 14px; }
+    .modal-photo { aspect-ratio: 1; border-radius: 6px; }
+    .modal-title h2 { font-size: 18px; line-height: 1.3; }
+    .modal-title .sub { font-size: 13px; }
+    .modal-title .codes { gap: 4px; margin-top: 8px; }
+    .sections {
+      gap: 14px; margin-top: 18px;
+      grid-template-columns: 1fr;
+    }
+    .section h4 { font-size: 11px; margin-bottom: 4px; }
+    .section p { font-size: 13px; }
+    footer { padding: 20px 14px; font-size: 12px; }
+  }
+
+  /* ============ 極小手機（≤ 360px）============ */
+  @media (max-width: 360px) {
+    .drug-grid { grid-template-columns: 1fr; }
+    .modal-header { grid-template-columns: 1fr; }
+    .modal-photo { max-width: 180px; margin: 0 auto; }
+  }
 </style>
 </head>
 <body>
@@ -217,9 +346,11 @@
   <div class="container layout">
     <aside>
       <h3>分類瀏覽</h3>
-      <ul class="cat-list" id="cat-list">
-        <li class="active" data-cat="">全部</li>
-      </ul>
+      <div class="cat-scroll">
+        <ul class="cat-list" id="cat-list">
+          <li class="active" data-cat="">全部</li>
+        </ul>
+      </div>
     </aside>
     <section>
       <div class="toolbar">
