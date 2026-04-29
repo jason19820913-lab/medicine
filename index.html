@@ -193,12 +193,20 @@
   .modal-title .sub { font-size: 15px; color: var(--text-mute); }
   .modal-title .codes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .modal-title .codes .chip { font-size: 13px; }
-  .sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-top: 24px; }
+  .sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; margin-top: 24px; }
   .section h4 {
-    font-size: 13px; color: var(--text-mute); text-transform: uppercase;
-    letter-spacing: .5px; margin: 0 0 8px; font-weight: 600;
+    display: inline-block;
+    font-size: 12.5px;
+    color: var(--primary-dark);
+    background: var(--primary-soft);
+    padding: 5px 14px;
+    border-radius: 16px;
+    letter-spacing: .3px;
+    margin: 0 0 10px;
+    font-weight: 600;
+    line-height: 1.4;
   }
-  .section p { margin: 0; white-space: pre-wrap; font-size: 14px; }
+  .section p { margin: 0; white-space: pre-wrap; font-size: 14px; line-height: 1.7; }
   .section.wide { grid-column: 1 / -1; }
   footer {
     text-align: center; padding: 30px 20px; color: var(--text-mute);
@@ -325,8 +333,8 @@
       gap: 14px; margin-top: 18px;
       grid-template-columns: 1fr;
     }
-    .section h4 { font-size: 11px; margin-bottom: 4px; }
-    .section p { font-size: 13px; }
+    .section h4 { font-size: 11.5px; padding: 4px 11px; margin-bottom: 8px; }
+    .section p { font-size: 13.5px; line-height: 1.7; }
     footer { padding: 20px 14px; font-size: 12px; }
   }
 
