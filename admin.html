@@ -516,6 +516,7 @@
         <div class="field"><label>製造廠商</label><input id="f-manufacturer"></div>
         <div class="field"><label>劑型</label><input id="f-dosage_form" placeholder="錠劑 / 膠囊..."></div>
         <div class="field"><label>含量</label><input id="f-strength" placeholder="100mg"></div>
+        <div class="field"><label>規格</label><input id="f-specification" placeholder="例：100mg/Tab，30 顆/瓶"></div>
       </div>
 
       <h4 class="form-sec">外觀辨識</h4>
@@ -818,7 +819,7 @@
     const d = state.editingDrug || {};
     document.getElementById('drug-modal-title').textContent = id ? '編輯藥品' : '新增藥品';
     ['name_zh','name_en','generic_name','category','nhi_code','product_code',
-     'manufacturer','dosage_form','strength','color','shape','marking','scoring',
+     'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
      'mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
      'status','photo_url','photo_file_id']
@@ -846,7 +847,7 @@
   async function saveDrug() {
     const payload = {};
     ['name_zh','name_en','generic_name','category','nhi_code','product_code',
-     'manufacturer','dosage_form','strength','color','shape','marking','scoring',
+     'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
      'mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
      'status','photo_url','photo_file_id']
