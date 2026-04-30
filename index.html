@@ -507,6 +507,7 @@
       </div>
       <div class="sections">
         ${sec('劑型 / 含量', [d.dosage_form, d.strength].filter(Boolean).join(' / '))}
+        ${sec('規格', d.specification)}
         ${sec('製造廠商', d.manufacturer)}
         ${sec('顏色 / 形狀', [d.color, d.shape].filter(Boolean).join(' / '))}
         ${sec('標記 / 刻痕', [d.marking, d.scoring].filter(Boolean).join(' / '))}
