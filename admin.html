@@ -422,7 +422,7 @@
         <button class="btn btn-primary" onclick="openDrugEdit()">＋ 新增藥品</button>
       </div>
       <div class="search-bar">
-        <input type="text" id="drug-q" placeholder="搜尋：中文名 / 英文名 / 健保代碼...">
+        <input type="text" id="drug-q" placeholder="精準搜尋：中文名 / 英文名 / 學名 / 健保 / 院內代碼 / 分類">
         <select id="drug-cat-filter"><option value="">所有分類</option></select>
         <select id="drug-status-filter">
           <option value="">全部狀態</option>
@@ -766,7 +766,9 @@
       if (cat && d.category !== cat) return false;
       if (st && d.status !== st) return false;
       if (!q) return true;
-      return ([d.name_zh, d.name_en, d.generic_name, d.nhi_code, d.product_code].join('|').toLowerCase()).indexOf(q) !== -1;
+      // 精準搜尋：只比對 6 個欄位且各欄獨立比對
+      const fields = [d.name_zh, d.name_en, d.generic_name, d.nhi_code, d.product_code, d.category];
+      return fields.some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
     });
     document.getElementById('drug-empty').classList.toggle('hidden', items.length > 0);
 
