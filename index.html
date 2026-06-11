@@ -495,7 +495,7 @@
         </div>
         <div class="info">
           <div class="name-row ${d.product_code ? 'has-code' : ''}">
-            ${d.product_code ? `<div class="name-code">院內 ${escapeHtml(d.product_code)}</div>` : ''}
+            ${d.product_code ? `<div class="name-code">${escapeHtml(d.product_code)}</div>` : ''}
             <div class="name-zh">${escapeHtml(d.name_zh || '')}</div>
           </div>
           <div class="name-en">${escapeHtml(d.name_en || '')}</div>
