@@ -153,6 +153,12 @@
     font-size: 12px; background: var(--primary-soft); color: var(--primary-dark);
     padding: 2px 8px; border-radius: 12px;
   }
+  .chip-code {
+    background: #fff; color: var(--text-mute);
+    border: 1px solid var(--border);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+  }
   .empty {
     text-align: center; padding: 60px 20px; color: var(--text-mute);
   }
@@ -476,6 +482,7 @@
           <div class="meta">
             ${d.dosage_form ? `<span class="chip">${escapeHtml(d.dosage_form)}${d.strength ? ' ' + escapeHtml(d.strength) : ''}</span>` : ''}
             ${d.category ? `<span class="chip">${escapeHtml(d.category)}</span>` : ''}
+            ${d.product_code ? `<span class="chip chip-code">院內 ${escapeHtml(d.product_code)}</span>` : ''}
           </div>
         </div>
       </div>
