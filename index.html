@@ -32,9 +32,27 @@
     box-shadow: var(--shadow);
   }
   .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+  header .header-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+  }
   header .brand { display: flex; align-items: center; gap: 12px; }
   header h1 { font-size: 24px; font-weight: 600; margin: 0; }
   header .subtitle { font-size: 13px; opacity: .85; margin-top: 4px; }
+
+  /* 頂部頁籤 */
+  .tabs {
+    display: flex; gap: 4px; background: rgba(255,255,255,.14);
+    padding: 4px; border-radius: 30px;
+  }
+  .tabs button {
+    padding: 7px 18px; border: none; background: transparent; color: #fff;
+    border-radius: 26px; cursor: pointer; font-size: 14px; font-weight: 500;
+    font-family: inherit;
+    transition: background .15s;
+  }
+  .tabs button:hover { background: rgba(255,255,255,.1); }
+  .tabs button.active { background: #fff; color: var(--primary-dark); }
   .logo-icon {
     width: 56px; height: 56px; border-radius: 10px; background: #fff; padding: 4px;
     display: flex; align-items: center; justify-content: center;
@@ -169,6 +187,61 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11px;
   }
+
+  /* 分頁面板 */
+  .tab-panel.hidden { display: none; }
+
+  /* 醫令來源切換 */
+  .source-toggle {
+    max-width: 800px; margin: 12px auto 0;
+    display: flex; gap: 6px; justify-content: center;
+  }
+  .source-toggle button {
+    padding: 6px 16px; border: 1px solid var(--border);
+    background: #fff; color: var(--text-mute); border-radius: 18px;
+    cursor: pointer; font-size: 13px; font-family: inherit;
+    transition: background .15s, color .15s;
+  }
+  .source-toggle button:hover { background: var(--primary-soft); }
+  .source-toggle button.active {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+  }
+
+  /* 醫令代碼列表 */
+  .med-list { display: flex; flex-direction: column; gap: 8px; }
+  .med-item {
+    background: var(--card); border-radius: 10px; padding: 14px 16px;
+    box-shadow: var(--shadow); cursor: pointer;
+    display: grid; grid-template-columns: 140px 1fr auto; gap: 16px; align-items: center;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .med-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(20,80,70,.1);
+  }
+  .med-item .code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 15px; font-weight: 700; color: var(--primary-dark);
+    letter-spacing: .3px;
+  }
+  .med-item .name-block .name {
+    font-size: 15px; color: var(--text); font-weight: 500;
+  }
+  .med-item .name-block .alt {
+    font-size: 12px; color: var(--text-mute); margin-top: 2px;
+  }
+  .med-item .side {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
+  }
+  .med-item .price {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 600; color: var(--text);
+  }
+  .badge-src {
+    font-size: 11px; padding: 1px 8px; border-radius: 10px;
+    background: var(--primary-soft); color: var(--primary-dark);
+  }
+  .badge-src.lab { background: #fff4e5; color: #b45309; }
   .empty {
     text-align: center; padding: 60px 20px; color: var(--text-mute);
   }
@@ -328,6 +401,20 @@
     .drug-card .info .meta .chip { font-size: 10.5px; padding: 1px 7px; }
     .drug-card:hover { transform: none; }
 
+    /* 頁籤 */
+    .header-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .tabs { align-self: stretch; justify-content: center; }
+    .tabs button { padding: 6px 14px; font-size: 13px; }
+
+    /* 醫令列表：手機改直向 */
+    .med-item {
+      grid-template-columns: 1fr; gap: 4px; padding: 12px 14px;
+    }
+    .med-item .code { font-size: 14.5px; }
+    .med-item .name-block .name { font-size: 14px; }
+    .med-item .side { justify-content: flex-start; margin-top: 4px; }
+    .source-toggle button { padding: 5px 12px; font-size: 12.5px; }
+
     /* Modal：手機改成從下方滑出的 Bottom Sheet */
     .modal-mask {
       padding: 0; align-items: flex-end;
@@ -375,42 +462,86 @@
 <body>
 
 <header>
-  <div class="container brand">
-    <div class="logo-icon"><img src="logo.png" alt="Elite Clinic"></div>
-    <div>
-      <h1 id="site-title">Elite Clinic 處方集查詢</h1>
-      <div class="subtitle">Drug Formulary Search</div>
+  <div class="container header-row">
+    <div class="brand">
+      <div class="logo-icon"><img src="logo.png" alt="Elite Clinic"></div>
+      <div>
+        <h1 id="site-title">Elite Clinic 處方集查詢</h1>
+        <div class="subtitle">Drug Formulary · Medical Code Search</div>
+      </div>
+    </div>
+    <div class="tabs" id="top-tabs">
+      <button data-tab="drugs" class="active">藥品</button>
+      <button data-tab="medcodes">健保代碼</button>
     </div>
   </div>
 </header>
 
-<section class="search-hero">
-  <div class="search-box">
-    <input id="search-input" type="text" placeholder="輸入藥品中文名 / 英文名 / 學名 / 健保代碼 / 院內代碼..." autocomplete="off">
-    <button class="search-btn" id="search-btn" aria-label="搜尋">🔍</button>
-  </div>
-  <div class="hint">精準搜尋：中文名 / 英文名 / 學名 / 健保代碼 / 院內代碼 / 分類</div>
-</section>
+<!-- 藥品分頁 -->
+<div class="tab-panel" id="tab-drugs">
+  <section class="search-hero">
+    <div class="search-box">
+      <input id="search-input" type="text" placeholder="輸入藥品中文名 / 英文名 / 學名 / 健保代碼 / 院內代碼..." autocomplete="off">
+      <button class="search-btn" id="search-btn" aria-label="搜尋">🔍</button>
+    </div>
+    <div class="hint">精準搜尋：中文名 / 英文名 / 學名 / 健保代碼 / 院內代碼 / 分類</div>
+  </section>
 
-<main>
-  <div class="container layout">
-    <aside>
-      <h3>分類瀏覽</h3>
-      <div class="cat-scroll">
-        <ul class="cat-list" id="cat-list">
-          <li class="active" data-cat="">全部</li>
-        </ul>
-      </div>
-    </aside>
-    <section>
-      <div class="toolbar">
-        <div class="count" id="count">載入中...</div>
-        <a class="admin-link" href="admin.html">管理員登入 →</a>
-      </div>
-      <div id="results" class="drug-grid"></div>
-    </section>
-  </div>
-</main>
+  <main>
+    <div class="container layout">
+      <aside>
+        <h3>分類瀏覽</h3>
+        <div class="cat-scroll">
+          <ul class="cat-list" id="cat-list">
+            <li class="active" data-cat="">全部</li>
+          </ul>
+        </div>
+      </aside>
+      <section>
+        <div class="toolbar">
+          <div class="count" id="count">載入中...</div>
+          <a class="admin-link" href="admin.html">管理員登入 →</a>
+        </div>
+        <div id="results" class="drug-grid"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- 醫令代碼分頁 -->
+<div class="tab-panel hidden" id="tab-medcodes">
+  <section class="search-hero">
+    <div class="search-box">
+      <input id="med-input" type="text" placeholder="輸入藥代 / 健保碼 / 中文名 / 商品名..." autocomplete="off">
+      <button class="search-btn" id="med-btn" aria-label="搜尋">🔍</button>
+    </div>
+    <div class="hint">精準搜尋：藥代 / 健保碼 / 中文名 / 商品名 / 分類</div>
+    <div class="source-toggle" id="src-toggle">
+      <button data-src="all" class="active">全部</button>
+      <button data-src="med_order">健保代碼</button>
+      <button data-src="lab_test">自費檢驗代碼</button>
+    </div>
+  </section>
+
+  <main>
+    <div class="container layout">
+      <aside>
+        <h3>分類瀏覽</h3>
+        <div class="cat-scroll">
+          <ul class="cat-list" id="med-cat-list">
+            <li class="active" data-cat="">全部</li>
+          </ul>
+        </div>
+      </aside>
+      <section>
+        <div class="toolbar">
+          <div class="count" id="med-count">載入中...</div>
+        </div>
+        <div id="med-results" class="med-list"></div>
+      </section>
+    </div>
+  </main>
+</div>
 
 <div class="modal-mask" id="modal">
   <div class="modal">
@@ -579,6 +710,139 @@
   });
   input.addEventListener('keydown', e => { if (e.key === 'Enter') { state.q = input.value.trim(); search(); } });
   document.getElementById('search-btn').addEventListener('click', () => { state.q = input.value.trim(); search(); });
+
+  // ============ 醫令代碼 ============
+  const medState = { q: '', source: 'all', category: '', items: [], categories: [] };
+
+  async function loadMedCategories() {
+    try {
+      const rows = await api('listMedCategories');
+      medState.categories = rows;
+      renderMedCats();
+    } catch (err) { console.warn(err); }
+  }
+
+  function renderMedCats() {
+    const ul = document.getElementById('med-cat-list');
+    // 依當前 source 過濾
+    const filtered = medState.source === 'all'
+      ? medState.categories
+      : medState.categories.filter(c => c.type === medState.source);
+    ul.innerHTML = `<li class="active" data-cat="">全部</li>` +
+      filtered.map(c => `<li data-cat="${escapeHtml(c.name)}">${escapeHtml(c.name)}${medState.source === 'all' ? ` <span style="opacity:.5;font-size:11px">(${c.type === 'med_order' ? '醫令' : '檢驗'})</span>` : ''}</li>`).join('');
+    ul.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => {
+        ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
+        li.classList.add('active');
+        medState.category = li.dataset.cat;
+        searchMed();
+      });
+    });
+  }
+
+  async function searchMed() {
+    document.getElementById('med-count').textContent = '搜尋中...';
+    document.getElementById('med-results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const data = await api('searchMedCodes', {
+        q: medState.q, source: medState.source, category: medState.category, limit: 500
+      });
+      medState.items = data.items;
+      renderMed();
+    } catch (err) {
+      document.getElementById('med-results').innerHTML = '';
+      document.getElementById('med-count').textContent = '錯誤：' + err.message;
+    }
+  }
+
+  function renderMed() {
+    document.getElementById('med-count').textContent = `共 ${medState.items.length} 筆結果`;
+    const root = document.getElementById('med-results');
+    if (!medState.items.length) {
+      root.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>找不到相關項目</div></div>';
+      return;
+    }
+    root.innerHTML = medState.items.map((it, idx) => `
+      <div class="med-item" data-idx="${idx}">
+        <div class="code">${escapeHtml(it.nhi_code || '—')}</div>
+        <div class="name-block">
+          <div class="name">${escapeHtml(it.name || '')}</div>
+          ${it.product_name ? `<div class="alt">${escapeHtml(it.product_name)}</div>` : ''}
+          ${it.drug_code ? `<div class="alt" style="font-family:ui-monospace,monospace;">藥代：${escapeHtml(it.drug_code)}</div>` : ''}
+        </div>
+        <div class="side">
+          ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
+          ${(it.nhi_price !== undefined && it.nhi_price !== '') ? `<span class="price" title="健保價">健保 ${escapeHtml(it.nhi_price)}</span>` : ''}
+          ${(it.self_price !== undefined && it.self_price !== '') ? `<span class="price" title="自費價" style="color:#b45309;">自費 ${escapeHtml(it.self_price)}</span>` : ''}
+          <span class="badge-src ${it._source === 'lab_test' ? 'lab' : ''}">${it._source === 'lab_test' ? '自費檢驗' : '健保'}</span>
+        </div>
+      </div>
+    `).join('');
+    root.querySelectorAll('.med-item').forEach(el => {
+      el.addEventListener('click', () => openMedDetail(parseInt(el.dataset.idx, 10)));
+    });
+  }
+
+  function openMedDetail(idx) {
+    const it = medState.items[idx];
+    if (!it) return;
+    const mc = document.getElementById('modal-content');
+    mc.innerHTML = `
+      <div style="padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:18px;">
+        <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:700;color:var(--primary-dark);letter-spacing:.5px;">
+          ${escapeHtml(it.nhi_code || '')}
+        </div>
+        <h2 style="margin:6px 0 0;font-size:20px;">${escapeHtml(it.name || '')}</h2>
+        ${it.product_name ? `<div style="color:var(--text-mute);font-size:14px;margin-top:3px">${escapeHtml(it.product_name)}</div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+          ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
+          <span class="badge-src ${it._source === 'lab_test' ? 'lab' : ''}">${it._source === 'lab_test' ? '自費檢驗代碼' : '健保代碼'}</span>
+        </div>
+      </div>
+      <div class="sections">
+        ${sec('藥代', it.drug_code)}
+        ${sec('健保碼', it.nhi_code)}
+        ${sec('健保價', (it.nhi_price !== undefined && it.nhi_price !== '') ? it.nhi_price : '')}
+        ${sec('自費價', (it.self_price !== undefined && it.self_price !== '') ? it.self_price : '')}
+      </div>
+    `;
+    document.getElementById('modal').classList.add('show');
+  }
+
+  // 醫令搜尋事件
+  const medInput = document.getElementById('med-input');
+  let medDebounce;
+  medInput.addEventListener('input', () => {
+    clearTimeout(medDebounce);
+    medDebounce = setTimeout(() => { medState.q = medInput.value.trim(); searchMed(); }, 300);
+  });
+  medInput.addEventListener('keydown', e => { if (e.key === 'Enter') { medState.q = medInput.value.trim(); searchMed(); } });
+  document.getElementById('med-btn').addEventListener('click', () => { medState.q = medInput.value.trim(); searchMed(); });
+
+  // 來源切換
+  document.getElementById('src-toggle').addEventListener('click', e => {
+    if (e.target.tagName !== 'BUTTON') return;
+    document.querySelectorAll('#src-toggle button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    medState.source = e.target.dataset.src;
+    medState.category = '';   // 切 source 時重置分類
+    renderMedCats();
+    searchMed();
+  });
+
+  // ============ 頁籤切換 ============
+  document.getElementById('top-tabs').addEventListener('click', e => {
+    if (e.target.tagName !== 'BUTTON') return;
+    const tab = e.target.dataset.tab;
+    document.querySelectorAll('#top-tabs button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('tab-' + tab).classList.remove('hidden');
+    if (tab === 'medcodes' && !medState.categories.length) {
+      loadMedCategories();
+      searchMed();
+    }
+  });
 
   // init
   loadCategories();

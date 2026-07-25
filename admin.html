@@ -399,7 +399,12 @@
     </div>
     <nav class="nav">
       <a data-view="drugs" class="active">藥品管理</a>
-      <a data-view="categories">分類管理</a>
+      <a data-view="categories">藥品分類</a>
+      <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">代碼查詢</div>
+      <a data-view="medorder">健保代碼</a>
+      <a data-view="labtest">自費檢驗代碼</a>
+      <a data-view="medcats">代碼分類</a>
+      <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">系統</div>
       <a data-view="admins" id="nav-admins">管理員</a>
       <a data-view="logs" id="nav-logs">操作紀錄</a>
       <a href="index.html" target="_blank" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:14px;">↗ 前往前台</a>
@@ -484,7 +489,113 @@
         </table>
       </div>
     </div>
+
+    <!-- 健保代碼 -->
+    <div class="view hidden" id="view-medorder">
+      <div class="page-header">
+        <h2>健保代碼</h2>
+        <button class="btn btn-primary" onclick="openMedEdit('med_order')">＋ 新增項目</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="mo-q" placeholder="搜尋：藥代 / 健保碼 / 中文名 / 商品名">
+        <select id="mo-cat"><option value="">所有分類</option></select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>藥代</th><th>健保碼</th><th>中文名</th><th>商品名</th><th>分類</th><th>自費價</th><th>健保價</th><th style="width:140px"></th>
+          </tr></thead>
+          <tbody id="mo-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 自費檢驗代碼 -->
+    <div class="view hidden" id="view-labtest">
+      <div class="page-header">
+        <h2>自費檢驗代碼</h2>
+        <button class="btn btn-primary" onclick="openMedEdit('lab_test')">＋ 新增項目</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="lt-q" placeholder="搜尋：藥代 / 健保碼 / 中文名 / 商品名">
+        <select id="lt-cat"><option value="">所有分類</option></select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>藥代</th><th>健保碼</th><th>中文名</th><th>商品名</th><th>分類</th><th>自費價</th><th>健保價</th><th style="width:140px"></th>
+          </tr></thead>
+          <tbody id="lt-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 代碼分類 -->
+    <div class="view hidden" id="view-medcats">
+      <div class="page-header">
+        <h2>代碼分類（健保 / 自費）</h2>
+        <button class="btn btn-primary" onclick="openMedCatEdit()">＋ 新增分類</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>類型</th><th>分類名稱</th><th>排序</th><th style="width:140px"></th></tr></thead>
+          <tbody id="mcat-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </main>
+</div>
+
+<!-- 醫令代碼編輯 modal -->
+<div class="modal-mask" id="med-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="med-modal-title">新增項目</h3>
+      <button class="close" onclick="closeModal('med-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field"><label>藥代</label><input id="mf-drug_code" placeholder="院內代號（選填）"></div>
+        <div class="field"><label>健保碼 *</label><input id="mf-nhi_code" required></div>
+        <div class="field"><label>中文名 *</label><input id="mf-name" required></div>
+        <div class="field"><label>商品名</label><input id="mf-product_name"></div>
+        <div class="field"><label>分類</label><select id="mf-category"></select></div>
+        <div class="field"><label>自費價</label><input id="mf-self_price" placeholder="例：1200"></div>
+        <div class="field"><label>健保價</label><input id="mf-nhi_price" placeholder="給付點數 / 金額"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('med-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveMedCode()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 醫令分類編輯 modal -->
+<div class="modal-mask" id="mcat-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="mcat-modal-title">新增分類</h3>
+      <button class="close" onclick="closeModal('mcat-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field">
+          <label>類型 *</label>
+          <select id="mcf-type">
+            <option value="med_order">健保代碼</option>
+            <option value="lab_test">自費檢驗代碼</option>
+          </select>
+        </div>
+        <div class="field"><label>排序（數字越小越前）</label><input type="number" id="mcf-sort_order" value="99"></div>
+      </div>
+      <div class="field"><label>分類名稱 *</label><input id="mcf-name" required></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('mcat-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveMedCategory()">儲存</button>
+    </div>
+  </div>
 </div>
 
 <!-- 藥品編輯 modal -->
@@ -735,6 +846,9 @@
     else if (view === 'categories') loadCategoriesTable();
     else if (view === 'admins') loadAdmins();
     else if (view === 'logs') loadLogs();
+    else if (view === 'medorder') loadMedCodes('med_order');
+    else if (view === 'labtest') loadMedCodes('lab_test');
+    else if (view === 'medcats') loadMedCatsTable();
     toggleDrawer(false);
   }
 
@@ -1069,6 +1183,181 @@
       `).join('');
     } catch (err) { toast(err.message, 'err'); }
   }
+
+  // ============ 醫令代碼 / 檢驗自費 ============
+  const medState = {
+    med_order: { items: [], categories: [], editing: null },
+    lab_test:  { items: [], categories: [], editing: null },
+    cats: []  // 全部分類（含兩種 type）
+  };
+
+  async function loadMedCategoriesAll() {
+    try {
+      medState.cats = await api('listMedCategories');
+      medState.med_order.categories = medState.cats.filter(c => c.type === 'med_order');
+      medState.lab_test.categories = medState.cats.filter(c => c.type === 'lab_test');
+      // 填 filter 下拉
+      ['mo','lt'].forEach(prefix => {
+        const src = prefix === 'mo' ? 'med_order' : 'lab_test';
+        const sel = document.getElementById(prefix + '-cat');
+        sel.innerHTML = '<option value="">所有分類</option>' +
+          medState[src].categories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+      });
+    } catch (err) { console.warn(err); }
+  }
+
+  async function loadMedCodes(source) {
+    if (!medState.cats.length) await loadMedCategoriesAll();
+    try {
+      const data = await api('searchMedCodes', { source, q: '', limit: 5000 });
+      medState[source].items = data.items;
+      renderMedCodes(source);
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  function renderMedCodes(source) {
+    const prefix = source === 'med_order' ? 'mo' : 'lt';
+    const q = (document.getElementById(prefix + '-q').value || '').trim().toLowerCase();
+    const cat = document.getElementById(prefix + '-cat').value;
+    const items = medState[source].items.filter(it => {
+      if (cat && it.category !== cat) return false;
+      if (!q) return true;
+      const fields = [it.drug_code, it.nhi_code, it.name, it.product_name, it.category];
+      return fields.some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
+    });
+    const tbody = document.getElementById(prefix + '-tbody');
+    tbody.innerHTML = items.map(it => `
+      <tr>
+        <td style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${esc(it.drug_code || '')}</td>
+        <td><strong style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--primary-dark);">${esc(it.nhi_code || '')}</strong></td>
+        <td>${esc(it.name || '')}</td>
+        <td style="color:var(--text-mute);">${esc(it.product_name || '')}</td>
+        <td>${esc(it.category || '')}</td>
+        <td style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${(it.self_price !== undefined && it.self_price !== '') ? esc(it.self_price) : ''}</td>
+        <td style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${(it.nhi_price !== undefined && it.nhi_price !== '') ? esc(it.nhi_price) : ''}</td>
+        <td><div class="row-actions">
+          <button onclick='openMedEdit(${JSON.stringify(source)}, ${JSON.stringify(it.nhi_code)})'>編輯</button>
+          <button class="del" onclick='confirmDelMed(${JSON.stringify(source)}, ${JSON.stringify(it.nhi_code)})'>刪除</button>
+        </div></td>
+      </tr>
+    `).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--text-mute);padding:30px;">尚無資料</td></tr>`;
+  }
+
+  function openMedEdit(source, nhiCode) {
+    if (!medState.cats.length) { toast('分類尚未載入，請稍候', 'warn'); return; }
+    const editing = nhiCode ? medState[source].items.find(x => x.nhi_code === nhiCode) : null;
+    medState[source].editing = editing;
+    medState._editingSource = source;
+    const it = editing || {};
+    document.getElementById('med-modal-title').textContent =
+      (nhiCode ? '編輯' : '新增') + (source === 'med_order' ? ' 健保代碼' : ' 自費檢驗代碼');
+    ['drug_code','nhi_code','name','product_name','self_price','nhi_price']
+      .forEach(k => {
+        const el = document.getElementById('mf-' + k);
+        if (el) el.value = it[k] || '';
+      });
+    // 分類下拉
+    const sel = document.getElementById('mf-category');
+    sel.innerHTML = '<option value="">（未分類）</option>' +
+      medState[source].categories.map(c =>
+        `<option value="${esc(c.name)}" ${c.name === it.category ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+    openModal('med-modal');
+  }
+
+  async function saveMedCode() {
+    const source = medState._editingSource;
+    const editing = medState[source].editing;
+    const payload = {};
+    ['drug_code','nhi_code','name','product_name','self_price','nhi_price']
+      .forEach(k => payload[k] = document.getElementById('mf-' + k).value);
+    payload.category = document.getElementById('mf-category').value;
+    if (!payload.nhi_code) return toast('健保碼必填', 'err');
+    if (!payload.name) return toast('中文名必填', 'err');
+    // 編輯時如果健保碼有改，把原本的傳過去讓後端找得到
+    if (editing && editing.nhi_code !== payload.nhi_code) payload._originalKey = editing.nhi_code;
+    try {
+      await api('saveMedCode', { source, code: payload });
+      closeModal('med-modal');
+      toast('儲存成功');
+      loadMedCodes(source);
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelMed(source, nhiCode) {
+    if (!confirm('確定要刪除此項目？此動作無法復原')) return;
+    try {
+      await api('deleteMedCode', { source, nhi_code: nhiCode });
+      toast('已刪除');
+      loadMedCodes(source);
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function loadMedCatsTable() {
+    await loadMedCategoriesAll();
+    const tbody = document.getElementById('mcat-tbody');
+    const sorted = medState.cats.slice().sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'med_order' ? -1 : 1;
+      return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
+    });
+    tbody.innerHTML = sorted.map(c => `
+      <tr>
+        <td>${c.type === 'med_order' ? '<span class="badge badge-role-editor">健保</span>' : '<span class="badge" style="background:#fff4e5;color:#b45309;">自費</span>'}</td>
+        <td><strong>${esc(c.name)}</strong></td>
+        <td>${esc(c.sort_order)}</td>
+        <td><div class="row-actions">
+          <button onclick='openMedCatEdit(${JSON.stringify(c.id)})'>編輯</button>
+          <button class="del" onclick='confirmDelMedCat(${JSON.stringify(c.id)})'>刪除</button>
+        </div></td>
+      </tr>
+    `).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--text-mute);padding:30px;">尚無分類</td></tr>`;
+  }
+
+  function openMedCatEdit(id) {
+    const editing = id ? medState.cats.find(c => c.id === id) : null;
+    medState._editingCat = editing;
+    const c = editing || {};
+    document.getElementById('mcat-modal-title').textContent = id ? '編輯分類' : '新增分類';
+    document.getElementById('mcf-type').value = c.type || 'med_order';
+    document.getElementById('mcf-name').value = c.name || '';
+    document.getElementById('mcf-sort_order').value = c.sort_order || 99;
+    openModal('mcat-modal');
+  }
+
+  async function saveMedCategory() {
+    const editing = medState._editingCat;
+    const payload = {
+      type: document.getElementById('mcf-type').value,
+      name: document.getElementById('mcf-name').value.trim(),
+      sort_order: parseInt(document.getElementById('mcf-sort_order').value, 10) || 99
+    };
+    if (!payload.name) return toast('分類名稱必填', 'err');
+    if (editing) payload.id = editing.id;
+    try {
+      await api('saveMedCategory', { category: payload });
+      closeModal('mcat-modal');
+      toast('儲存成功');
+      loadMedCatsTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelMedCat(id) {
+    if (!confirm('確定要刪除此分類？')) return;
+    try {
+      await api('deleteMedCategory', { id });
+      toast('已刪除');
+      loadMedCatsTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // 篩選事件
+  ['mo-q','mo-cat'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => renderMedCodes('med_order'));
+    document.getElementById(id).addEventListener('change', () => renderMedCodes('med_order'));
+  });
+  ['lt-q','lt-cat'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => renderMedCodes('lab_test'));
+    document.getElementById(id).addEventListener('change', () => renderMedCodes('lab_test'));
+  });
 
   // ============ Helpers ============
   function openModal(id) { document.getElementById(id).classList.add('show'); }
