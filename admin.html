@@ -401,8 +401,8 @@
       <a data-view="drugs" class="active">藥品管理</a>
       <a data-view="categories">藥品分類</a>
       <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">代碼查詢</div>
-      <a data-view="medorder">健保代碼</a>
-      <a data-view="labtest">自費檢驗代碼</a>
+      <a data-view="medorder">診療處置代碼</a>
+      <a data-view="labtest">檢驗及自費代碼</a>
       <a data-view="medcats">代碼分類</a>
       <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">系統</div>
       <a data-view="admins" id="nav-admins">管理員</a>
@@ -490,10 +490,10 @@
       </div>
     </div>
 
-    <!-- 健保代碼 -->
+    <!-- 診療處置代碼 -->
     <div class="view hidden" id="view-medorder">
       <div class="page-header">
-        <h2>健保代碼</h2>
+        <h2>診療處置代碼</h2>
         <button class="btn btn-primary" onclick="openMedEdit('med_order')">＋ 新增項目</button>
       </div>
       <div class="search-bar">
@@ -510,10 +510,10 @@
       </div>
     </div>
 
-    <!-- 自費檢驗代碼 -->
+    <!-- 檢驗及自費代碼 -->
     <div class="view hidden" id="view-labtest">
       <div class="page-header">
-        <h2>自費檢驗代碼</h2>
+        <h2>檢驗及自費代碼</h2>
         <button class="btn btn-primary" onclick="openMedEdit('lab_test')">＋ 新增項目</button>
       </div>
       <div class="search-bar">
@@ -533,7 +533,7 @@
     <!-- 代碼分類 -->
     <div class="view hidden" id="view-medcats">
       <div class="page-header">
-        <h2>代碼分類（健保 / 自費）</h2>
+        <h2>代碼分類（診療處置 / 檢驗自費）</h2>
         <button class="btn btn-primary" onclick="openMedCatEdit()">＋ 新增分類</button>
       </div>
       <div class="table-wrap">
@@ -583,8 +583,8 @@
         <div class="field">
           <label>類型 *</label>
           <select id="mcf-type">
-            <option value="med_order">健保代碼</option>
-            <option value="lab_test">自費檢驗代碼</option>
+            <option value="med_order">診療處置代碼</option>
+            <option value="lab_test">檢驗及自費代碼</option>
           </select>
         </div>
         <div class="field"><label>排序（數字越小越前）</label><input type="number" id="mcf-sort_order" value="99"></div>
@@ -1250,7 +1250,7 @@
     medState._editingSource = source;
     const it = editing || {};
     document.getElementById('med-modal-title').textContent =
-      (nhiCode ? '編輯' : '新增') + (source === 'med_order' ? ' 健保代碼' : ' 自費檢驗代碼');
+      (nhiCode ? '編輯' : '新增') + (source === 'med_order' ? ' 診療處置代碼' : ' 檢驗及自費代碼');
     ['drug_code','nhi_code','name','product_name','self_price','nhi_price']
       .forEach(k => {
         const el = document.getElementById('mf-' + k);
@@ -1301,7 +1301,7 @@
     });
     tbody.innerHTML = sorted.map(c => `
       <tr>
-        <td>${c.type === 'med_order' ? '<span class="badge badge-role-editor">健保</span>' : '<span class="badge" style="background:#fff4e5;color:#b45309;">自費</span>'}</td>
+        <td>${c.type === 'med_order' ? '<span class="badge badge-role-editor">診療</span>' : '<span class="badge" style="background:#fff4e5;color:#b45309;">檢驗自費</span>'}</td>
         <td><strong>${esc(c.name)}</strong></td>
         <td>${esc(c.sort_order)}</td>
         <td><div class="row-actions">

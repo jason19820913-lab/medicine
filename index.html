@@ -519,7 +519,7 @@
     <div class="source-toggle" id="src-toggle">
       <button data-src="all" class="active">全部</button>
       <button data-src="med_order">診療處置代碼</button>
-      <button data-src="lab_test">檢驗代碼</button>
+      <button data-src="lab_test">檢驗及自費代碼</button>
     </div>
   </section>
 
@@ -774,7 +774,7 @@
           ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
           ${(it.nhi_price !== undefined && it.nhi_price !== '') ? `<span class="price" title="健保價">健保 ${escapeHtml(it.nhi_price)}</span>` : ''}
           ${(it.self_price !== undefined && it.self_price !== '') ? `<span class="price" title="自費價" style="color:#b45309;">自費 ${escapeHtml(it.self_price)}</span>` : ''}
-          <span class="badge-src ${it._source === 'lab_test' ? 'lab' : ''}">${it._source === 'lab_test' ? '檢驗' : '診療處置'}</span>
+          <span class="badge-src ${it._source === 'lab_test' ? 'lab' : ''}">${it._source === 'lab_test' ? '檢驗自費' : '診療處置'}</span>
         </div>
       </div>
     `).join('');
@@ -796,7 +796,7 @@
         ${it.product_name ? `<div style="color:var(--text-mute);font-size:14px;margin-top:3px">${escapeHtml(it.product_name)}</div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
           ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
-          <span class="badge-src ${it._source === 'lab_test' ? 'lab' : ''}">${it._source === 'lab_test' ? '檢驗代碼' : '診療處置代碼'}</span>
+          <span class="badge-src ${it._source === 'lab_test' ? 'lab' : ''}">${it._source === 'lab_test' ? '檢驗及自費代碼' : '診療處置代碼'}</span>
         </div>
       </div>
       <div class="sections">
