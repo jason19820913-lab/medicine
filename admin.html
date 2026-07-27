@@ -554,8 +554,14 @@
     <!-- 代碼分類 -->
     <div class="view hidden" id="view-medcats">
       <div class="page-header">
-        <h2>代碼分類（診療處置 / 檢驗自費）</h2>
-        <button class="btn btn-primary" onclick="openMedCatEdit()">＋ 新增分類</button>
+        <h2>代碼分類（診療處置 / 檢驗自費 / 診斷）</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="importCatsFromSheet('all')" title="掃描 3 張 sheet 的分類欄，把還沒登記的分類補進來">↓ 從 Sheet 匯入分類</button>
+          <button class="btn btn-primary" onclick="openMedCatEdit()">＋ 新增分類</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-mute);margin-bottom:10px;">
+        提示：「從 Sheet 匯入」會讀取「診療處置代碼 / 檢驗及自費代碼 / 診斷代碼」三張表的「分類」欄，把新的分類名稱補進管理清單，既有分類不會動。
       </div>
       <div class="table-wrap">
         <table>
@@ -1481,6 +1487,23 @@
     try {
       await api('deleteMedCategory', { id });
       toast('已刪除');
+      loadMedCatsTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function importCatsFromSheet(source) {
+    if (!confirm('將掃描 sheet 內的「分類」欄，把還沒登記的分類名稱補進管理清單。既有分類不會動。要繼續嗎？')) return;
+    try {
+      const results = await api('importCategoriesFromSheet', { source: source || 'all' });
+      let totalAdded = 0;
+      const lines = [];
+      for (const [src, r] of Object.entries(results)) {
+        const label = src === 'med_order' ? '診療處置' : src === 'lab_test' ? '檢驗自費' : '診斷';
+        totalAdded += r.added;
+        lines.push(`${label}：新增 ${r.added} 筆（原表 ${r.found} 個唯一分類、${r.skipped} 個已存在）`);
+        if (r.added > 0) lines.push('  → ' + r.names.join('、'));
+      }
+      alert('匯入完成，共新增 ' + totalAdded + ' 筆分類。\n\n' + lines.join('\n'));
       loadMedCatsTable();
     } catch (err) { toast(err.message, 'err'); }
   }
