@@ -1262,7 +1262,7 @@
   async function loadMedCodes(source) {
     if (!medState.cats.length) await loadMedCategoriesAll();
     try {
-      const data = await api('searchMedCodes', { source, q: '', limit: 5000 });
+      const data = await api('searchMedCodes', { source, q: '', limit: 30000 });
       medState[source].items = data.items;
       renderMedCodes(source);
     } catch (err) { toast(err.message, 'err'); }
@@ -1349,7 +1349,7 @@
   async function loadDxCodes() {
     if (!medState.cats.length) await loadMedCategoriesAll();
     try {
-      const data = await api('searchMedCodes', { source: 'diagnosis', q: '', limit: 10000 });
+      const data = await api('searchMedCodes', { source: 'diagnosis', q: '', limit: 30000 });
       medState.diagnosis.items = data.items;
       renderDxCodes();
     } catch (err) { toast(err.message, 'err'); }

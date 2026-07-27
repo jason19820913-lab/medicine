@@ -777,7 +777,7 @@
     document.getElementById('med-results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
       const data = await api('searchMedCodes', {
-        q: medState.q, source: medState.source, category: medState.category, limit: 500
+        q: medState.q, source: medState.source, category: medState.category, limit: 30000
       });
       medState.items = data.items;
       renderMed();
@@ -902,7 +902,8 @@
       const rows = await api('listMedCategories', { source: 'diagnosis' });
       dxState.categories = rows;
       const ul = document.getElementById('dx-cat-list');
-      ul.innerHTML = `<li class="active" data-cat="">全部</li>` +
+      // 「全部」在懶載入模式下不主動觸發，作為提示狀態
+      ul.innerHTML = `<li class="active" data-cat="">— 選擇科別 —</li>` +
         rows.map(c => `<li data-cat="${escapeHtml(c.name)}">${escapeHtml(c.name)}</li>`).join('');
       ul.querySelectorAll('li').forEach(li => {
         li.addEventListener('click', () => {
@@ -916,11 +917,25 @@
   }
 
   async function searchDx() {
+    // 懶載入：沒點分類、也沒搜尋關鍵字 → 顯示提示，不撈資料
+    // （診斷代碼可能有 7 萬筆以上，一次全撈會很慢）
+    const hasFilter = dxState.q || dxState.category;
+    if (!hasFilter) {
+      document.getElementById('dx-count').textContent = '';
+      document.getElementById('dx-results').innerHTML =
+        '<div class="empty">' +
+        '<div class="empty-icon">📋</div>' +
+        '<div style="font-size:16px;color:var(--text);margin-bottom:6px;">請從左側選擇科別，或輸入關鍵字搜尋</div>' +
+        '<div style="font-size:13px;color:var(--text-mute);">診斷代碼資料量大，需先指定條件才會顯示結果</div>' +
+        '</div>';
+      dxState.items = [];
+      return;
+    }
     document.getElementById('dx-count').textContent = '搜尋中...';
     document.getElementById('dx-results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
       const data = await api('searchMedCodes', {
-        source: 'diagnosis', q: dxState.q, category: dxState.category, limit: 1000
+        source: 'diagnosis', q: dxState.q, category: dxState.category, limit: 30000
       });
       dxState.items = data.items;
       renderDx();
