@@ -473,6 +473,7 @@
     <div class="tabs" id="top-tabs">
       <button data-tab="drugs" class="active">藥品</button>
       <button data-tab="medcodes">醫令代碼</button>
+      <button data-tab="diagnosis">診斷代碼</button>
     </div>
   </div>
 </header>
@@ -520,7 +521,6 @@
       <button data-src="all" class="active">全部</button>
       <button data-src="med_order">診療處置代碼</button>
       <button data-src="lab_test">檢驗及自費代碼</button>
-      <button data-src="diagnosis">診斷代碼</button>
     </div>
   </section>
 
@@ -539,6 +539,36 @@
           <div class="count" id="med-count">載入中...</div>
         </div>
         <div id="med-results" class="med-list"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- 診斷代碼分頁 -->
+<div class="tab-panel hidden" id="tab-diagnosis">
+  <section class="search-hero">
+    <div class="search-box">
+      <input id="dx-input" type="text" placeholder="輸入 ICD 代碼 / 中文診斷 / 英文診斷..." autocomplete="off">
+      <button class="search-btn" id="dx-btn" aria-label="搜尋">🔍</button>
+    </div>
+    <div class="hint">精準搜尋：ICD 代碼 / 中文診斷 / 英文診斷 / 科別分類</div>
+  </section>
+
+  <main>
+    <div class="container layout">
+      <aside>
+        <h3>科別分類</h3>
+        <div class="cat-scroll">
+          <ul class="cat-list" id="dx-cat-list">
+            <li class="active" data-cat="">全部</li>
+          </ul>
+        </div>
+      </aside>
+      <section>
+        <div class="toolbar">
+          <div class="count" id="dx-count">載入中...</div>
+        </div>
+        <div id="dx-results" class="med-list"></div>
       </section>
     </div>
   </main>
@@ -864,6 +894,81 @@
     searchMed();
   });
 
+  // ============ 診斷代碼（獨立頁）============
+  const dxState = { q: '', category: '', items: [], categories: [] };
+
+  async function loadDxCategories() {
+    try {
+      const rows = await api('listMedCategories', { source: 'diagnosis' });
+      dxState.categories = rows;
+      const ul = document.getElementById('dx-cat-list');
+      ul.innerHTML = `<li class="active" data-cat="">全部</li>` +
+        rows.map(c => `<li data-cat="${escapeHtml(c.name)}">${escapeHtml(c.name)}</li>`).join('');
+      ul.querySelectorAll('li').forEach(li => {
+        li.addEventListener('click', () => {
+          ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
+          li.classList.add('active');
+          dxState.category = li.dataset.cat;
+          searchDx();
+        });
+      });
+    } catch (err) { console.warn(err); }
+  }
+
+  async function searchDx() {
+    document.getElementById('dx-count').textContent = '搜尋中...';
+    document.getElementById('dx-results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const data = await api('searchMedCodes', {
+        source: 'diagnosis', q: dxState.q, category: dxState.category, limit: 1000
+      });
+      dxState.items = data.items;
+      renderDx();
+    } catch (err) {
+      document.getElementById('dx-results').innerHTML = '';
+      document.getElementById('dx-count').textContent = '錯誤：' + err.message;
+    }
+  }
+
+  function renderDx() {
+    document.getElementById('dx-count').textContent = `共 ${dxState.items.length} 筆結果`;
+    const root = document.getElementById('dx-results');
+    if (!dxState.items.length) {
+      root.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>找不到相關診斷</div></div>';
+      return;
+    }
+    root.innerHTML = dxState.items.map((it, idx) => `
+      <div class="med-item" data-idx="${idx}">
+        <div class="code">${escapeHtml(it.icd_code || '—')}</div>
+        <div class="name-block">
+          <div class="name">${escapeHtml(it.name || '')}</div>
+          ${it.name_en ? `<div class="alt">${escapeHtml(it.name_en)}</div>` : ''}
+        </div>
+        <div class="side">
+          ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+    root.querySelectorAll('.med-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const it = dxState.items[parseInt(el.dataset.idx, 10)];
+        it._source = 'diagnosis';
+        // 借用 openMedDetail 的邏輯：把 it 塞進 medState.items 尾端然後開啟
+        medState.items.push(it);
+        openMedDetail(medState.items.length - 1);
+      });
+    });
+  }
+
+  const dxInput = document.getElementById('dx-input');
+  let dxDebounce;
+  dxInput.addEventListener('input', () => {
+    clearTimeout(dxDebounce);
+    dxDebounce = setTimeout(() => { dxState.q = dxInput.value.trim(); searchDx(); }, 300);
+  });
+  dxInput.addEventListener('keydown', e => { if (e.key === 'Enter') { dxState.q = dxInput.value.trim(); searchDx(); } });
+  document.getElementById('dx-btn').addEventListener('click', () => { dxState.q = dxInput.value.trim(); searchDx(); });
+
   // ============ 頁籤切換 ============
   document.getElementById('top-tabs').addEventListener('click', e => {
     if (e.target.tagName !== 'BUTTON') return;
@@ -875,6 +980,10 @@
     if (tab === 'medcodes' && !medState.categories.length) {
       loadMedCategories();
       searchMed();
+    }
+    if (tab === 'diagnosis' && !dxState.categories.length) {
+      loadDxCategories();
+      searchDx();
     }
   });
 
