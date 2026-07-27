@@ -556,6 +556,7 @@
       <div class="page-header">
         <h2>代碼分類（診療處置 / 檢驗自費 / 診斷）</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="syncDxCatsFromSheet()" title="以「診斷代碼」sheet 的 E 欄為準，覆寫「診斷代碼分類」表">🔁 同步診斷分類</button>
           <button class="btn" onclick="importCatsFromSheet('all')" title="掃描 3 張 sheet 的分類欄，把還沒登記的分類補進來">↓ 從 Sheet 匯入分類</button>
           <button class="btn btn-primary" onclick="openMedCatEdit()">＋ 新增分類</button>
         </div>
@@ -1504,6 +1505,15 @@
         if (r.added > 0) lines.push('  → ' + r.names.join('、'));
       }
       alert('匯入完成，共新增 ' + totalAdded + ' 筆分類。\n\n' + lines.join('\n'));
+      loadMedCatsTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function syncDxCatsFromSheet() {
+    if (!confirm('將以「診斷代碼」工作表的「分類」欄為準，覆寫「診斷代碼分類」工作表的所有內容（診斷代碼本身不動）。\n\n這會清除診斷代碼分類表的既有列並重新寫入，要繼續嗎？')) return;
+    try {
+      const r = await api('syncDiagnosisCategories');
+      alert(`已重新同步，共寫入 ${r.updated} 個分類：\n\n${r.categories.join('、')}`);
       loadMedCatsTable();
     } catch (err) { toast(err.message, 'err'); }
   }
