@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>線上處方集查詢</title>
+<title>Elite Clinic 處方集 · 醫令 · 診斷碼查詢</title>
 <style>
   :root {
     --primary: #1FAE9F;
@@ -466,8 +466,8 @@
     <div class="brand">
       <div class="logo-icon"><img src="logo.png" alt="Elite Clinic"></div>
       <div>
-        <h1 id="site-title">Elite Clinic 處方集查詢</h1>
-        <div class="subtitle">Drug Formulary · Medical Code Search</div>
+        <h1 id="site-title">Elite Clinic 處方集 · 醫令 · 診斷碼查詢</h1>
+        <div class="subtitle">Drug Formulary · Medical Order · Diagnosis Code</div>
       </div>
     </div>
     <div class="tabs" id="top-tabs">
@@ -566,7 +566,8 @@
       </aside>
       <section>
         <div class="toolbar">
-          <div class="count" id="dx-count">載入中...</div>
+          <div class="count" id="dx-count">請從左側選擇科別或輸入關鍵字</div>
+          <a class="admin-link" onclick="reloadDxData()" style="cursor:pointer;">🔄 重新載入資料</a>
         </div>
         <div id="dx-results" class="med-list"></div>
       </section>
@@ -588,7 +589,7 @@
 <script>
   // ============ 設定（請修改）============
   const API_URL = 'https://script.google.com/macros/s/AKfycbyBurrw2JPcBLflnXHJnTsmbYtkwpNIiXWz9t-HZtxZtWHJ5Jyyxr1JzN9aGYf4MKeLIA/exec';
-  const SITE_TITLE = 'Elite Clinic 處方集查詢';
+  const SITE_TITLE = 'Elite Clinic 處方集 · 醫令 · 診斷碼查詢';
   // =====================================
 
   document.getElementById('site-title').textContent = SITE_TITLE;
@@ -894,8 +895,81 @@
     searchMed();
   });
 
-  // ============ 診斷代碼（獨立頁）============
-  const dxState = { q: '', category: '', items: [], categories: [] };
+  // ============ 診斷代碼（獨立頁，本地全量快取）============
+  const dxState = {
+    q: '', category: '', items: [], categories: [],
+    allItems: null,           // 全部診斷代碼（記憶體）
+    dataReady: false,          // 是否已載入完成
+    dataLoading: false,
+    version: null
+  };
+  const DX_CACHE_KEY = 'dx_full_v1';
+  const DX_CACHE_TTL = 24 * 60 * 60 * 1000;  // 24 小時
+
+  async function ensureDxData(forceRefresh) {
+    if (dxState.dataReady && !forceRefresh) return;
+    if (dxState.dataLoading) {
+      // 已在載入中，等它完成
+      await new Promise(r => {
+        const t = setInterval(() => { if (dxState.dataReady) { clearInterval(t); r(); } }, 100);
+      });
+      return;
+    }
+
+    // 嘗試讀 localStorage
+    if (!forceRefresh) {
+      try {
+        const raw = localStorage.getItem(DX_CACHE_KEY);
+        if (raw) {
+          const cached = JSON.parse(raw);
+          if (cached && cached.rows && (Date.now() - cached.ts < DX_CACHE_TTL)) {
+            dxState.allItems = cached.rows.map(r => ({
+              icd_code: r[0], name: r[1], name_en: r[2], category: r[3], _source: 'diagnosis'
+            }));
+            dxState.version = cached.version || null;
+            dxState.dataReady = true;
+            return;
+          }
+        }
+      } catch (e) { /* localStorage 讀取失敗 → 重新下載 */ }
+    }
+
+    // 從後端下載
+    dxState.dataLoading = true;
+    updateDxDataStatus('資料庫首次載入中，請稍候…（僅需一次，之後搜尋都是秒開）');
+    try {
+      const data = await api('exportDiagnosis', dxState.version ? { version: dxState.version } : {});
+      if (data.not_modified) {
+        // 版本沒變，用現有 cache（此路徑理論上不會走到，因為前面已檢查 TTL）
+        dxState.dataReady = true;
+        return;
+      }
+      dxState.allItems = data.rows.map(r => ({
+        icd_code: r[0], name: r[1], name_en: r[2], category: r[3], _source: 'diagnosis'
+      }));
+      dxState.version = data.version;
+      // 存回 localStorage（用緊湊格式：陣列）
+      try {
+        localStorage.setItem(DX_CACHE_KEY, JSON.stringify({
+          rows: data.rows,
+          version: data.version,
+          ts: Date.now()
+        }));
+      } catch (e) {
+        console.warn('localStorage 容量不足，本次僅存記憶體');
+      }
+      dxState.dataReady = true;
+    } finally {
+      dxState.dataLoading = false;
+    }
+  }
+
+  function updateDxDataStatus(msg) {
+    document.getElementById('dx-count').textContent = msg;
+    document.getElementById('dx-results').innerHTML =
+      '<div class="loading"><div class="spinner"></div><div style="margin-top:10px;color:var(--text-mute);font-size:13px;">' +
+      escapeHtml(msg) + '</div></div>';
+  }
 
   async function loadDxCategories() {
     try {
@@ -917,36 +991,56 @@
   }
 
   async function searchDx() {
-    // 懶載入：沒點分類、也沒搜尋關鍵字 → 顯示提示，不撈資料
-    // （診斷代碼可能有 7 萬筆以上，一次全撈會很慢）
     const hasFilter = dxState.q || dxState.category;
     if (!hasFilter) {
-      document.getElementById('dx-count').textContent = '';
+      const readyMsg = dxState.dataReady ? `已載入 ${dxState.allItems.length.toLocaleString()} 筆診斷資料` : '';
+      document.getElementById('dx-count').textContent = readyMsg;
       document.getElementById('dx-results').innerHTML =
         '<div class="empty">' +
         '<div class="empty-icon">📋</div>' +
         '<div style="font-size:16px;color:var(--text);margin-bottom:6px;">請從左側選擇科別，或輸入關鍵字搜尋</div>' +
-        '<div style="font-size:13px;color:var(--text-mute);">診斷代碼資料量大，需先指定條件才會顯示結果</div>' +
+        '<div style="font-size:13px;color:var(--text-mute);">支援 ICD 代碼 / 中文診斷 / 英文診斷</div>' +
         '</div>';
       dxState.items = [];
       return;
     }
-    document.getElementById('dx-count').textContent = '搜尋中...';
-    document.getElementById('dx-results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    // 確保資料已載入（首次會下載並存 localStorage，之後秒開）
     try {
-      const data = await api('searchMedCodes', {
-        source: 'diagnosis', q: dxState.q, category: dxState.category, limit: 30000
-      });
-      dxState.items = data.items;
-      renderDx();
+      await ensureDxData();
     } catch (err) {
-      document.getElementById('dx-results').innerHTML = '';
-      document.getElementById('dx-count').textContent = '錯誤：' + err.message;
+      document.getElementById('dx-count').textContent = '';
+      document.getElementById('dx-results').innerHTML =
+        '<div class="empty"><div class="empty-icon">⚠️</div><div>資料載入失敗：' + escapeHtml(err.message) + '</div></div>';
+      return;
     }
+
+    // 本地過濾（瞬間完成）
+    const q = dxState.q.toLowerCase();
+    const cat = dxState.category;
+    const t0 = performance.now();
+    const items = dxState.allItems.filter(it => {
+      if (cat && it.category !== cat) return false;
+      if (!q) return true;
+      if ((it.icd_code || '').toLowerCase().indexOf(q) !== -1) return true;
+      if ((it.name || '').toLowerCase().indexOf(q) !== -1) return true;
+      if ((it.name_en || '').toLowerCase().indexOf(q) !== -1) return true;
+      if ((it.category || '').toLowerCase().indexOf(q) !== -1) return true;
+      return false;
+    });
+    const t1 = performance.now();
+    dxState.items = items.slice(0, 2000);   // 前 2000 筆顯示（避免 DOM 過重）
+    renderDx(items.length, Math.round(t1 - t0));
   }
 
-  function renderDx() {
-    document.getElementById('dx-count').textContent = `共 ${dxState.items.length} 筆結果`;
+  function renderDx(totalMatched, ms) {
+    const shown = dxState.items.length;
+    const total = totalMatched !== undefined ? totalMatched : shown;
+    let countMsg = `共 ${total.toLocaleString()} 筆結果`;
+    if (shown < total) countMsg += `（顯示前 ${shown.toLocaleString()} 筆，請縮小搜尋範圍）`;
+    if (ms !== undefined) countMsg += ` · ${ms} ms`;
+    document.getElementById('dx-count').textContent = countMsg;
+
     const root = document.getElementById('dx-results');
     if (!dxState.items.length) {
       root.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>找不到相關診斷</div></div>';
@@ -968,12 +1062,25 @@
       el.addEventListener('click', () => {
         const it = dxState.items[parseInt(el.dataset.idx, 10)];
         it._source = 'diagnosis';
-        // 借用 openMedDetail 的邏輯：把 it 塞進 medState.items 尾端然後開啟
         medState.items.push(it);
         openMedDetail(medState.items.length - 1);
       });
     });
   }
+
+  // 手動重新下載診斷代碼資料（清 localStorage 快取）
+  async function reloadDxData() {
+    if (!confirm('重新從 Google Sheet 下載最新診斷代碼資料？（首次會需要幾秒鐘）')) return;
+    try {
+      localStorage.removeItem(DX_CACHE_KEY);
+    } catch (e) {}
+    dxState.dataReady = false;
+    dxState.allItems = null;
+    dxState.version = null;
+    await searchDx();
+    if (dxState.dataReady) alert('已重新載入 ' + dxState.allItems.length.toLocaleString() + ' 筆資料');
+  }
+  window.reloadDxData = reloadDxData;
 
   const dxInput = document.getElementById('dx-input');
   let dxDebounce;
