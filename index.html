@@ -512,14 +512,15 @@
 <div class="tab-panel hidden" id="tab-medcodes">
   <section class="search-hero">
     <div class="search-box">
-      <input id="med-input" type="text" placeholder="輸入藥代 / 健保碼 / 中文名 / 商品名..." autocomplete="off">
+      <input id="med-input" type="text" placeholder="輸入代碼 / 中文名 / 英文名 / 商品名..." autocomplete="off">
       <button class="search-btn" id="med-btn" aria-label="搜尋">🔍</button>
     </div>
-    <div class="hint">精準搜尋：藥代 / 健保碼 / 中文名 / 商品名 / 分類</div>
+    <div class="hint">精準搜尋：健保碼 / ICD / 中文名 / 英文名 / 商品名 / 分類</div>
     <div class="source-toggle" id="src-toggle">
       <button data-src="all" class="active">全部</button>
       <button data-src="med_order">診療處置代碼</button>
       <button data-src="lab_test">檢驗及自費代碼</button>
+      <button data-src="diagnosis">診斷代碼</button>
     </div>
   </section>
 
@@ -728,8 +729,9 @@
     const filtered = medState.source === 'all'
       ? medState.categories
       : medState.categories.filter(c => c.type === medState.source);
+    const typeLabel = t => t === 'med_order' ? '診療' : t === 'lab_test' ? '檢驗' : '診斷';
     ul.innerHTML = `<li class="active" data-cat="">全部</li>` +
-      filtered.map(c => `<li data-cat="${escapeHtml(c.name)}">${escapeHtml(c.name)}${medState.source === 'all' ? ` <span style="opacity:.5;font-size:11px">(${c.type === 'med_order' ? '醫令' : '檢驗'})</span>` : ''}</li>`).join('');
+      filtered.map(c => `<li data-cat="${escapeHtml(c.name)}">${escapeHtml(c.name)}${medState.source === 'all' ? ` <span style="opacity:.5;font-size:11px">(${typeLabel(c.type)})</span>` : ''}</li>`).join('');
     ul.querySelectorAll('li').forEach(li => {
       li.addEventListener('click', () => {
         ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
@@ -762,21 +764,35 @@
       root.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>找不到相關項目</div></div>';
       return;
     }
-    root.innerHTML = medState.items.map((it, idx) => `
-      <div class="med-item" data-idx="${idx}">
-        <div class="code">${escapeHtml(it.nhi_code || '—')}</div>
-        <div class="name-block">
-          <div class="name">${escapeHtml(it.name || '')}</div>
-          ${it.product_name ? `<div class="alt">${escapeHtml(it.product_name)}</div>` : ''}
-          ${it.drug_code ? `<div class="alt" style="font-family:ui-monospace,monospace;">藥代：${escapeHtml(it.drug_code)}</div>` : ''}
-        </div>
-        <div class="side">
-          ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
-          ${(it.nhi_price !== undefined && it.nhi_price !== '') ? `<span class="price" title="健保價">健保 ${escapeHtml(it.nhi_price)}</span>` : ''}
-          ${(it.self_price !== undefined && it.self_price !== '') ? `<span class="price" title="自費價" style="color:#b45309;">自費 ${escapeHtml(it.self_price)}</span>` : ''}
-        </div>
-      </div>
-    `).join('');
+    root.innerHTML = medState.items.map((it, idx) => {
+      if (it._source === 'diagnosis') {
+        return `
+          <div class="med-item" data-idx="${idx}">
+            <div class="code">${escapeHtml(it.icd_code || '—')}</div>
+            <div class="name-block">
+              <div class="name">${escapeHtml(it.name || '')}</div>
+              ${it.name_en ? `<div class="alt">${escapeHtml(it.name_en)}</div>` : ''}
+            </div>
+            <div class="side">
+              ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="med-item" data-idx="${idx}">
+          <div class="code">${escapeHtml(it.nhi_code || '—')}</div>
+          <div class="name-block">
+            <div class="name">${escapeHtml(it.name || '')}</div>
+            ${it.product_name ? `<div class="alt">${escapeHtml(it.product_name)}</div>` : ''}
+            ${it.drug_code ? `<div class="alt" style="font-family:ui-monospace,monospace;">藥代：${escapeHtml(it.drug_code)}</div>` : ''}
+          </div>
+          <div class="side">
+            ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
+            ${(it.nhi_price !== undefined && it.nhi_price !== '') ? `<span class="price" title="健保價">健保 ${escapeHtml(it.nhi_price)}</span>` : ''}
+            ${(it.self_price !== undefined && it.self_price !== '') ? `<span class="price" title="自費價" style="color:#b45309;">自費 ${escapeHtml(it.self_price)}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
     root.querySelectorAll('.med-item').forEach(el => {
       el.addEventListener('click', () => openMedDetail(parseInt(el.dataset.idx, 10)));
     });
@@ -786,23 +802,42 @@
     const it = medState.items[idx];
     if (!it) return;
     const mc = document.getElementById('modal-content');
-    mc.innerHTML = `
-      <div style="padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:18px;">
-        <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:700;color:var(--primary-dark);letter-spacing:.5px;">
-          ${escapeHtml(it.nhi_code || '')}
-        </div>
-        <h2 style="margin:6px 0 0;font-size:20px;">${escapeHtml(it.name || '')}</h2>
-        ${it.product_name ? `<div style="color:var(--text-mute);font-size:14px;margin-top:3px">${escapeHtml(it.product_name)}</div>` : ''}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
-          ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
-          <span class="badge-src ${it._source === 'lab_test' ? 'lab' : ''}">${it._source === 'lab_test' ? '檢驗及自費代碼' : '診療處置代碼'}</span>
-        </div>
-      </div>
-      <div class="sections">
+    const isDx = it._source === 'diagnosis';
+    const isLab = it._source === 'lab_test';
+    const srcLabel = isDx ? '診斷代碼' : (isLab ? '檢驗及自費代碼' : '診療處置代碼');
+    const primaryCode = isDx ? it.icd_code : it.nhi_code;
+
+    let sections;
+    if (isDx) {
+      sections = `
+        ${sec('ICD 代碼', it.icd_code)}
+        ${sec('中文診斷', it.name)}
+        ${sec('英文診斷', it.name_en)}
+        ${sec('分類 / 科別', it.category)}
+      `;
+    } else {
+      sections = `
         ${sec('藥代', it.drug_code)}
         ${sec('健保碼', it.nhi_code)}
         ${sec('健保價', (it.nhi_price !== undefined && it.nhi_price !== '') ? it.nhi_price : '')}
         ${sec('自費價', (it.self_price !== undefined && it.self_price !== '') ? it.self_price : '')}
+      `;
+    }
+
+    mc.innerHTML = `
+      <div style="padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:18px;">
+        <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:700;color:var(--primary-dark);letter-spacing:.5px;">
+          ${escapeHtml(primaryCode || '')}
+        </div>
+        <h2 style="margin:6px 0 0;font-size:20px;">${escapeHtml(it.name || '')}</h2>
+        ${(isDx ? it.name_en : it.product_name) ? `<div style="color:var(--text-mute);font-size:14px;margin-top:3px">${escapeHtml(isDx ? it.name_en : it.product_name)}</div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+          ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
+          <span class="badge-src ${isLab ? 'lab' : ''}">${srcLabel}</span>
+        </div>
+      </div>
+      <div class="sections">
+        ${sections}
       </div>
     `;
     document.getElementById('modal').classList.add('show');

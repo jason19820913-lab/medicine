@@ -403,6 +403,7 @@
       <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">代碼查詢</div>
       <a data-view="medorder">診療處置代碼</a>
       <a data-view="labtest">檢驗及自費代碼</a>
+      <a data-view="diagnosis">診斷代碼</a>
       <a data-view="medcats">代碼分類</a>
       <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">系統</div>
       <a data-view="admins" id="nav-admins">管理員</a>
@@ -530,6 +531,26 @@
       </div>
     </div>
 
+    <!-- 診斷代碼 -->
+    <div class="view hidden" id="view-diagnosis">
+      <div class="page-header">
+        <h2>診斷代碼 (ICD)</h2>
+        <button class="btn btn-primary" onclick="openDxEdit()">＋ 新增診斷</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="dx-q" placeholder="搜尋：ICD 代碼 / 中文名 / 英文名">
+        <select id="dx-cat"><option value="">所有科別</option></select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>ICD 代碼</th><th>中文診斷</th><th>英文診斷</th><th>科別</th><th style="width:140px"></th>
+          </tr></thead>
+          <tbody id="dx-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- 代碼分類 -->
     <div class="view hidden" id="view-medcats">
       <div class="page-header">
@@ -571,6 +592,28 @@
   </div>
 </div>
 
+<!-- 診斷代碼編輯 modal -->
+<div class="modal-mask" id="dx-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="dx-modal-title">新增診斷</h3>
+      <button class="close" onclick="closeModal('dx-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field"><label>ICD 代碼 *</label><input id="dxf-icd_code" required placeholder="例：J00 / A09.9"></div>
+        <div class="field"><label>科別 / 分類</label><select id="dxf-category"></select></div>
+      </div>
+      <div class="field"><label>中文診斷 *</label><input id="dxf-name" required placeholder="例：急性鼻咽炎"></div>
+      <div class="field"><label>英文診斷</label><input id="dxf-name_en" placeholder="例：Acute nasopharyngitis (common cold)"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('dx-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveDx()">儲存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 醫令分類編輯 modal -->
 <div class="modal-mask" id="mcat-modal">
   <div class="modal">
@@ -585,6 +628,7 @@
           <select id="mcf-type">
             <option value="med_order">診療處置代碼</option>
             <option value="lab_test">檢驗及自費代碼</option>
+            <option value="diagnosis">診斷代碼</option>
           </select>
         </div>
         <div class="field"><label>排序（數字越小越前）</label><input type="number" id="mcf-sort_order" value="99"></div>
@@ -848,6 +892,7 @@
     else if (view === 'logs') loadLogs();
     else if (view === 'medorder') loadMedCodes('med_order');
     else if (view === 'labtest') loadMedCodes('lab_test');
+    else if (view === 'diagnosis') loadDxCodes();
     else if (view === 'medcats') loadMedCatsTable();
     toggleDrawer(false);
   }
@@ -1188,7 +1233,8 @@
   const medState = {
     med_order: { items: [], categories: [], editing: null },
     lab_test:  { items: [], categories: [], editing: null },
-    cats: []  // 全部分類（含兩種 type）
+    diagnosis: { items: [], categories: [], editing: null },
+    cats: []  // 全部分類（含 3 種 type）
   };
 
   async function loadMedCategoriesAll() {
@@ -1196,11 +1242,12 @@
       medState.cats = await api('listMedCategories');
       medState.med_order.categories = medState.cats.filter(c => c.type === 'med_order');
       medState.lab_test.categories = medState.cats.filter(c => c.type === 'lab_test');
-      // 填 filter 下拉
-      ['mo','lt'].forEach(prefix => {
-        const src = prefix === 'mo' ? 'med_order' : 'lab_test';
+      medState.diagnosis.categories = medState.cats.filter(c => c.type === 'diagnosis');
+      // 填三個 filter 下拉
+      [['mo','med_order','所有分類'], ['lt','lab_test','所有分類'], ['dx','diagnosis','所有科別']].forEach(([prefix, src, label]) => {
         const sel = document.getElementById(prefix + '-cat');
-        sel.innerHTML = '<option value="">所有分類</option>' +
+        if (!sel) return;
+        sel.innerHTML = `<option value="">${label}</option>` +
           medState[src].categories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
       });
     } catch (err) { console.warn(err); }
@@ -1292,6 +1339,91 @@
     } catch (err) { toast(err.message, 'err'); }
   }
 
+  // ============ 診斷代碼 (ICD) ============
+  async function loadDxCodes() {
+    if (!medState.cats.length) await loadMedCategoriesAll();
+    try {
+      const data = await api('searchMedCodes', { source: 'diagnosis', q: '', limit: 10000 });
+      medState.diagnosis.items = data.items;
+      renderDxCodes();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  function renderDxCodes() {
+    const q = (document.getElementById('dx-q').value || '').trim().toLowerCase();
+    const cat = document.getElementById('dx-cat').value;
+    const items = medState.diagnosis.items.filter(it => {
+      if (cat && it.category !== cat) return false;
+      if (!q) return true;
+      const fields = [it.icd_code, it.name, it.name_en, it.category];
+      return fields.some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
+    });
+    const tbody = document.getElementById('dx-tbody');
+    tbody.innerHTML = items.map(it => `
+      <tr>
+        <td><strong style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--primary-dark);">${esc(it.icd_code || '')}</strong></td>
+        <td>${esc(it.name || '')}</td>
+        <td style="color:var(--text-mute);">${esc(it.name_en || '')}</td>
+        <td>${esc(it.category || '')}</td>
+        <td><div class="row-actions">
+          <button onclick='openDxEdit(${JSON.stringify(it.icd_code)})'>編輯</button>
+          <button class="del" onclick='confirmDelDx(${JSON.stringify(it.icd_code)})'>刪除</button>
+        </div></td>
+      </tr>
+    `).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--text-mute);padding:30px;">尚無資料</td></tr>`;
+  }
+
+  function openDxEdit(icdCode) {
+    if (!medState.cats.length) { toast('分類尚未載入，請稍候', 'warn'); return; }
+    const editing = icdCode ? medState.diagnosis.items.find(x => x.icd_code === icdCode) : null;
+    medState.diagnosis.editing = editing;
+    const it = editing || {};
+    document.getElementById('dx-modal-title').textContent = icdCode ? '編輯診斷' : '新增診斷';
+    ['icd_code','name','name_en'].forEach(k => {
+      const el = document.getElementById('dxf-' + k);
+      if (el) el.value = it[k] || '';
+    });
+    const sel = document.getElementById('dxf-category');
+    sel.innerHTML = '<option value="">（未分類）</option>' +
+      medState.diagnosis.categories.map(c =>
+        `<option value="${esc(c.name)}" ${c.name === it.category ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+    openModal('dx-modal');
+  }
+
+  async function saveDx() {
+    const editing = medState.diagnosis.editing;
+    const payload = {};
+    ['icd_code','name','name_en'].forEach(k => payload[k] = document.getElementById('dxf-' + k).value.trim());
+    payload.category = document.getElementById('dxf-category').value;
+    if (!payload.icd_code) return toast('ICD 代碼必填', 'err');
+    if (!payload.name) return toast('中文診斷必填', 'err');
+    if (editing && editing.icd_code !== payload.icd_code) payload._originalKey = editing.icd_code;
+    try {
+      await api('saveMedCode', { source: 'diagnosis', code: payload });
+      closeModal('dx-modal');
+      toast('儲存成功');
+      loadDxCodes();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelDx(icdCode) {
+    if (!confirm('確定要刪除此診斷？此動作無法復原')) return;
+    try {
+      await api('deleteMedCode', { source: 'diagnosis', icd_code: icdCode });
+      toast('已刪除');
+      loadDxCodes();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // 篩選事件
+  ['dx-q','dx-cat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', renderDxCodes);
+      el.addEventListener('change', renderDxCodes);
+    }
+  });
+
   async function loadMedCatsTable() {
     await loadMedCategoriesAll();
     const tbody = document.getElementById('mcat-tbody');
@@ -1301,7 +1433,11 @@
     });
     tbody.innerHTML = sorted.map(c => `
       <tr>
-        <td>${c.type === 'med_order' ? '<span class="badge badge-role-editor">診療</span>' : '<span class="badge" style="background:#fff4e5;color:#b45309;">檢驗自費</span>'}</td>
+        <td>${
+          c.type === 'med_order' ? '<span class="badge badge-role-editor">診療</span>' :
+          c.type === 'diagnosis' ? '<span class="badge" style="background:#f3e8ff;color:#6b21a8;">診斷</span>' :
+                                    '<span class="badge" style="background:#fff4e5;color:#b45309;">檢驗自費</span>'
+        }</td>
         <td><strong>${esc(c.name)}</strong></td>
         <td>${esc(c.sort_order)}</td>
         <td><div class="row-actions">
