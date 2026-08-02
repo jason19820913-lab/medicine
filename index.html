@@ -187,6 +187,32 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11px;
   }
+  /* 金鶯常用紅色標籤 */
+  .chip-elite {
+    background: #dc2626; color: #fff; font-weight: 600;
+    padding: 2px 9px; font-size: 12px;
+    box-shadow: 0 1px 3px rgba(220,38,38,.3);
+  }
+  /* 金鶯用法紅框（詳細頁）*/
+  .elite-usage-box {
+    background: linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%);
+    border-left: 5px solid #dc2626;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+  }
+  .elite-usage-box .elite-title {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700; color: #dc2626;
+    margin-bottom: 8px;
+  }
+  .elite-usage-box .elite-title::before {
+    content: "⭐"; font-size: 14px;
+  }
+  .elite-usage-box .elite-content {
+    color: #7f1d1d; white-space: pre-wrap;
+    font-size: 14.5px; line-height: 1.75;
+  }
 
   /* 分頁面板 */
   .tab-panel.hidden { display: none; }
@@ -663,6 +689,7 @@
           </div>
           <div class="name-en">${escapeHtml(d.name_en || '')}</div>
           <div class="meta">
+            ${_isEliteCommon(d) ? `<span class="chip chip-elite">⭐ 金鶯常用</span>` : ''}
             ${d.dosage_form ? `<span class="chip">${escapeHtml(d.dosage_form)}${d.strength ? ' ' + escapeHtml(d.strength) : ''}</span>` : ''}
             ${d.category ? `<span class="chip">${escapeHtml(d.category)}</span>` : ''}
           </div>
@@ -688,12 +715,19 @@
           <div class="sub">${escapeHtml(d.name_en || '')}</div>
           ${d.generic_name ? `<div class="sub"><em>學名：${escapeHtml(d.generic_name)}</em></div>` : ''}
           <div class="codes">
+            ${_isEliteCommon(d) ? `<span class="chip chip-elite">⭐ 金鶯常用</span>` : ''}
             ${d.nhi_code ? `<span class="chip">健保 ${escapeHtml(d.nhi_code)}</span>` : ''}
             ${d.product_code ? `<span class="chip">院內 ${escapeHtml(d.product_code)}</span>` : ''}
             ${d.category ? `<span class="chip">${escapeHtml(d.category)}</span>` : ''}
           </div>
         </div>
       </div>
+      ${d.elite_usage ? `
+        <div class="elite-usage-box">
+          <div class="elite-title">金鶯用法</div>
+          <div class="elite-content">${escapeHtml(d.elite_usage)}</div>
+        </div>
+      ` : ''}
       <div class="sections">
         ${sec('劑型 / 含量', [d.dosage_form, d.strength].filter(Boolean).join(' / '))}
         ${sec('規格', d.specification)}
@@ -702,9 +736,9 @@
         ${sec('標記 / 刻痕', [d.marking, d.scoring].filter(Boolean).join(' / '))}
         ${sec('懷孕分級', d.pregnancy_category)}
         ${sec('儲存條件', d.storage)}
-        ${sec('藥物機轉 Mechanism of Action', d.mechanism, true)}
-        ${sec('適應症 Indications', d.indications, true)}
         ${sec('用法用量 Dosage', d.dosage, true)}
+        ${sec('適應症 Indications', d.indications, true)}
+        ${sec('藥物機轉 Mechanism of Action', d.mechanism, true)}
         ${sec('極大量 Maximum Dose', d.max_dose, true)}
         ${sec('副作用 Side Effects', d.side_effects, true)}
         ${sec('禁忌症 Contraindications', d.contraindications, true)}
@@ -731,6 +765,11 @@
     return (s == null ? '' : String(s))
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function _isEliteCommon(d) {
+    const v = String(d && d.elite_common || '').trim().toLowerCase();
+    return v === 'y' || v === 'yes' || v === '1' || v === 'true' || v === '是' || v === '常用' || v === '⭐';
   }
 
   // events
