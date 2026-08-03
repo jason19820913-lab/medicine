@@ -194,11 +194,28 @@
     box-shadow: 0 1px 3px rgba(220,38,38,.3);
     max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  /* 慢箋標籤（紫色）*/
-  .chip-chronic {
-    background: #7c3aed; color: #fff; font-weight: 600;
-    padding: 2px 9px; font-size: 12px;
-    box-shadow: 0 1px 3px rgba(124,58,237,.3);
+  /* 慢箋：整張卡片轉紅 */
+  .med-item.is-chronic {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+  }
+  .med-item.is-chronic .code { color: #dc2626; }
+  .med-item.is-chronic .name-block .name { color: #b91c1c; }
+  .med-item.is-chronic .name-block .alt { color: #ef4444; opacity: .85; }
+  .med-item.is-chronic .chip {
+    background: #fee2e2; color: #b91c1c;
+  }
+  .med-item.is-chronic:hover {
+    box-shadow: 0 6px 16px rgba(220,38,38,.15);
+  }
+  /* 慢箋標籤（接在代碼後面，加大）*/
+  .chronic-badge {
+    display: inline-block; margin-left: 8px;
+    background: #dc2626; color: #fff; font-weight: 700;
+    padding: 3px 11px; font-size: 13px; border-radius: 14px;
+    vertical-align: middle; letter-spacing: .5px;
+    box-shadow: 0 1px 4px rgba(220,38,38,.35);
+    font-family: "Noto Sans TC", system-ui, sans-serif;
   }
   /* 磨粉藍色標籤 */
   .chip-grind {
@@ -251,7 +268,7 @@
   .med-item {
     background: var(--card); border-radius: 10px; padding: 14px 16px;
     box-shadow: var(--shadow); cursor: pointer;
-    display: grid; grid-template-columns: 140px 1fr auto; gap: 16px; align-items: center;
+    display: grid; grid-template-columns: 190px 1fr auto; gap: 16px; align-items: center;
     transition: transform .15s, box-shadow .15s;
   }
   .med-item:hover {
@@ -450,6 +467,7 @@
       grid-template-columns: 1fr; gap: 4px; padding: 12px 14px;
     }
     .med-item .code { font-size: 14.5px; }
+    .chronic-badge { font-size: 11.5px; padding: 2px 8px; margin-left: 6px; }
     .med-item .name-block .name { font-size: 14px; }
     .med-item .side { justify-content: flex-start; margin-top: 4px; }
     .source-toggle button { padding: 5px 12px; font-size: 12.5px; }
@@ -540,7 +558,10 @@
       <section>
         <div class="toolbar">
           <div class="count" id="count">載入中...</div>
-          <a class="admin-link" href="admin.html">管理員登入 →</a>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <a class="admin-link" onclick="reloadDrugData()" style="cursor:pointer;">🔄 重新載入</a>
+            <a class="admin-link" href="admin.html">管理員登入 →</a>
+          </div>
         </div>
         <div id="results" class="drug-grid"></div>
       </section>
@@ -637,14 +658,42 @@
 
   let state = { q: '', category: '', items: [] };
 
-  async function api(action, params = {}) {
+  async function api(action, params = {}, retries = 2) {
     const url = new URL(API_URL);
     url.searchParams.set('action', action);
     Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== '') url.searchParams.set(k, v); });
-    const res = await fetch(url.toString());
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || '呼叫失敗');
-    return data.data;
+
+    let lastErr;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 25000);   // 25 秒逾時
+        const res = await fetch(url.toString(), { signal: ctrl.signal });
+        clearTimeout(timer);
+
+        const text = await res.text();
+        // Apps Script 超時 / 錯誤時會回 HTML，先攔下來
+        if (text.trim().startsWith('<')) {
+          throw new Error('伺服器忙碌中');
+        }
+        let data;
+        try { data = JSON.parse(text); }
+        catch (e) { throw new Error('回應格式錯誤'); }
+        if (!data.ok) throw new Error(data.error || '呼叫失敗');
+        return data.data;
+      } catch (err) {
+        lastErr = err;
+        const retriable = /忙碌|格式錯誤|abort|Failed to fetch|NetworkError/i.test(err.message || err.name || '');
+        if (attempt < retries && retriable) {
+          await new Promise(r => setTimeout(r, 700 * (attempt + 1)));   // 遞增退避
+          continue;
+        }
+        break;
+      }
+    }
+    throw new Error(lastErr && lastErr.message === '伺服器忙碌中'
+      ? '伺服器忙碌，請稍候再試（可按重新整理）'
+      : (lastErr ? lastErr.message : '連線失敗'));
   }
 
   async function loadCategories() {
@@ -669,23 +718,64 @@
     }
   }
 
+  // 藥品全量快取（同診斷代碼作法，一次下載後本機過濾）
+  const DRUG_CACHE_KEY = 'drug_full_v1';
+  const DRUG_CACHE_TTL = 30 * 60 * 1000;   // 30 分鐘
+  let drugAll = null;
+
+  async function ensureDrugData(force) {
+    if (drugAll && !force) return;
+    if (!force) {
+      try {
+        const raw = localStorage.getItem(DRUG_CACHE_KEY);
+        if (raw) {
+          const c = JSON.parse(raw);
+          if (c && c.items && (Date.now() - c.ts < DRUG_CACHE_TTL)) { drugAll = c.items; return; }
+        }
+      } catch (e) {}
+    }
+    const data = await api('search', { q: '', limit: 2000 });
+    drugAll = data.items;
+    try {
+      localStorage.setItem(DRUG_CACHE_KEY, JSON.stringify({ items: drugAll, ts: Date.now() }));
+    } catch (e) {}
+  }
+
   async function search() {
     document.getElementById('count').textContent = '搜尋中...';
     document.getElementById('results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      const data = await api('search', { q: state.q, category: state.category, limit: 200 });
-      state.items = data.items;
-      render();
+      await ensureDrugData();
+      const q = state.q.toLowerCase();
+      const cat = state.category;
+      const t0 = performance.now();
+      state.items = drugAll.filter(d => {
+        if (cat && d.category !== cat) return false;
+        if (!q) return true;
+        return [d.name_zh, d.name_en, d.generic_name, d.nhi_code, d.product_code, d.category]
+          .some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
+      });
+      const t1 = performance.now();
+      render(Math.round(t1 - t0));
     } catch (err) {
-      document.getElementById('results').innerHTML = '';
-      document.getElementById('count').textContent = '錯誤：' + err.message;
+      document.getElementById('results').innerHTML =
+        '<div class="empty"><div class="empty-icon">⚠️</div><div>' + escapeHtml(err.message) +
+        '</div><div style="margin-top:12px"><button onclick="reloadDrugData()" style="padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer">重新載入</button></div></div>';
+      document.getElementById('count').textContent = '';
     }
   }
 
-  function render() {
+  async function reloadDrugData() {
+    try { localStorage.removeItem(DRUG_CACHE_KEY); } catch (e) {}
+    drugAll = null;
+    await search();
+  }
+  window.reloadDrugData = reloadDrugData;
+
+  function render(ms) {
     const root = document.getElementById('results');
     const count = document.getElementById('count');
-    count.textContent = `共 ${state.items.length} 筆結果`;
+    count.textContent = `共 ${state.items.length} 筆結果` + (ms !== undefined ? ` · ${ms} ms` : '');
     if (!state.items.length) {
       root.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>找不到相關藥品</div></div>';
       return;
@@ -907,8 +997,8 @@
 
     mc.innerHTML = `
       <div style="padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:18px;">
-        <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:700;color:var(--primary-dark);letter-spacing:.5px;">
-          ${escapeHtml(primaryCode || '')}
+        <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:700;color:${it.chronic_rx ? '#dc2626' : 'var(--primary-dark)'};letter-spacing:.5px;">
+          ${escapeHtml(primaryCode || '')}${it.chronic_rx ? `<span class="chronic-badge" style="font-size:14px;padding:4px 13px;">慢箋</span>` : ''}
         </div>
         <h2 style="margin:6px 0 0;font-size:20px;">${escapeHtml(it.name || '')}</h2>
         ${(isDx ? it.name_en : it.product_name) ? `<div style="color:var(--text-mute);font-size:14px;margin-top:3px">${escapeHtml(isDx ? it.name_en : it.product_name)}</div>` : ''}
@@ -1082,14 +1172,13 @@
       return;
     }
     root.innerHTML = dxState.items.map((it, idx) => `
-      <div class="med-item" data-idx="${idx}">
-        <div class="code">${escapeHtml(it.icd_code || '—')}</div>
+      <div class="med-item ${it.chronic_rx ? 'is-chronic' : ''}" data-idx="${idx}">
+        <div class="code">${escapeHtml(it.icd_code || '—')}${it.chronic_rx ? `<span class="chronic-badge" title="${escapeHtml(it.chronic_rx)}">慢箋</span>` : ''}</div>
         <div class="name-block">
           <div class="name">${escapeHtml(it.name || '')}</div>
           ${it.name_en ? `<div class="alt">${escapeHtml(it.name_en)}</div>` : ''}
         </div>
         <div class="side">
-          ${it.chronic_rx ? `<span class="chip chip-chronic" title="${escapeHtml(it.chronic_rx)}">慢箋</span>` : ''}
           ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
         </div>
       </div>
