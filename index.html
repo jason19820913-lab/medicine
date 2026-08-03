@@ -194,6 +194,12 @@
     box-shadow: 0 1px 3px rgba(220,38,38,.3);
     max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  /* 慢箋標籤（紫色）*/
+  .chip-chronic {
+    background: #7c3aed; color: #fff; font-weight: 600;
+    padding: 2px 9px; font-size: 12px;
+    box-shadow: 0 1px 3px rgba(124,58,237,.3);
+  }
   /* 磨粉藍色標籤 */
   .chip-grind {
     background: #2563eb; color: #fff; font-weight: 600;
@@ -888,6 +894,7 @@
         ${sec('中文診斷', it.name)}
         ${sec('英文診斷', it.name_en)}
         ${sec('分類 / 科別', it.category)}
+        ${it.chronic_rx ? sec('慢性病連續處方箋', it.chronic_rx + '\n\n※ 僅供參考，實際開立仍須符合病情穩定、需長期用藥等條件，並依健保署最新規定辦理。', true) : ''}
       `;
     } else {
       sections = `
@@ -967,7 +974,7 @@
           const cached = JSON.parse(raw);
           if (cached && cached.rows && (Date.now() - cached.ts < DX_CACHE_TTL)) {
             dxState.allItems = cached.rows.map(r => ({
-              icd_code: r[0], name: r[1], name_en: r[2], category: r[3], _source: 'diagnosis'
+              icd_code: r[0], name: r[1], name_en: r[2], category: r[3], chronic_rx: r[4] || '', _source: 'diagnosis'
             }));
             dxState.version = cached.version || null;
             dxState.dataReady = true;
@@ -988,7 +995,7 @@
         return;
       }
       dxState.allItems = data.rows.map(r => ({
-        icd_code: r[0], name: r[1], name_en: r[2], category: r[3], _source: 'diagnosis'
+        icd_code: r[0], name: r[1], name_en: r[2], category: r[3], chronic_rx: r[4] || '', _source: 'diagnosis'
       }));
       dxState.version = data.version;
       // 存回 localStorage（用緊湊格式：陣列）
@@ -1097,6 +1104,7 @@
           ${it.name_en ? `<div class="alt">${escapeHtml(it.name_en)}</div>` : ''}
         </div>
         <div class="side">
+          ${it.chronic_rx ? `<span class="chip chip-chronic" title="${escapeHtml(it.chronic_rx)}">慢箋</span>` : ''}
           ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
         </div>
       </div>
