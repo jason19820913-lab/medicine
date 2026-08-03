@@ -605,7 +605,7 @@
       </aside>
       <section>
         <div class="toolbar">
-          <div class="count" id="dx-count">請從左側選擇科別或輸入關鍵字</div>
+          <div class="count" id="dx-count">載入中...</div>
           <a class="admin-link" onclick="reloadDxData()" style="cursor:pointer;">🔄 重新載入資料</a>
         </div>
         <div id="dx-results" class="med-list"></div>
@@ -1026,8 +1026,7 @@
       const rows = await api('listMedCategories', { source: 'diagnosis' });
       dxState.categories = rows;
       const ul = document.getElementById('dx-cat-list');
-      // 「全部」在懶載入模式下不主動觸發，作為提示狀態
-      ul.innerHTML = `<li class="active" data-cat="">— 選擇科別 —</li>` +
+      ul.innerHTML = `<li class="active" data-cat="">全部</li>` +
         rows.map(c => `<li data-cat="${escapeHtml(c.name)}">${escapeHtml(c.name)}</li>`).join('');
       ul.querySelectorAll('li').forEach(li => {
         li.addEventListener('click', () => {
@@ -1041,20 +1040,6 @@
   }
 
   async function searchDx() {
-    const hasFilter = dxState.q || dxState.category;
-    if (!hasFilter) {
-      const readyMsg = dxState.dataReady ? `已載入 ${dxState.allItems.length.toLocaleString()} 筆診斷資料` : '';
-      document.getElementById('dx-count').textContent = readyMsg;
-      document.getElementById('dx-results').innerHTML =
-        '<div class="empty">' +
-        '<div class="empty-icon">📋</div>' +
-        '<div style="font-size:16px;color:var(--text);margin-bottom:6px;">請從左側選擇科別，或輸入關鍵字搜尋</div>' +
-        '<div style="font-size:13px;color:var(--text-mute);">支援 ICD 代碼 / 中文診斷 / 英文診斷</div>' +
-        '</div>';
-      dxState.items = [];
-      return;
-    }
-
     // 確保資料已載入（首次會下載並存 localStorage，之後秒開）
     try {
       await ensureDxData();
@@ -1079,7 +1064,7 @@
       return false;
     });
     const t1 = performance.now();
-    dxState.items = items.slice(0, 2000);   // 前 2000 筆顯示（避免 DOM 過重）
+    dxState.items = items.slice(0, 3000);   // 前 3000 筆顯示（避免 DOM 過重）
     renderDx(items.length, Math.round(t1 - t0));
   }
 
@@ -1155,8 +1140,10 @@
       searchMed();
     }
     if (tab === 'diagnosis' && !dxState.categories.length) {
-      loadDxCategories();
-      searchDx();
+      (async () => {
+        await searchDx();          // 先載資料 + 顯示全部
+        await loadDxCategories();  // 再補上側欄分類
+      })();
     }
   });
 
