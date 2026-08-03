@@ -1111,23 +1111,47 @@
       escapeHtml(msg) + '</div></div>';
   }
 
-  async function loadDxCategories() {
-    try {
-      const rows = await api('listMedCategories', { source: 'diagnosis' });
-      dxState.categories = rows;
-      const ul = document.getElementById('dx-cat-list');
-      ul.innerHTML = `<li class="active" data-cat="">全部</li>` +
-        rows.map(c => `<li data-cat="${escapeHtml(c.name)}">${escapeHtml(c.name)}</li>`).join('');
-      ul.querySelectorAll('li').forEach(li => {
-        li.addEventListener('click', () => {
-          ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
-          li.classList.add('active');
-          dxState.category = li.dataset.cat;
-          searchDx();
-        });
+  // 診所版分類固定順序（與後端 CLINIC_DX_CATEGORY_RULES 一致）
+  const DX_CATEGORY_ORDER = [
+    '呼吸道', '慢性病（三高/代謝）', '腸胃消化', '皮膚', '耳鼻喉', '眼科',
+    '感染 / 病毒疹', '骨骼肌肉 / 疼痛', '泌尿生殖', '小外科 / 外傷',
+    '身心 / 神經', '症狀 / 一般', '預防保健 / 開藥', '其他'
+  ];
+
+  /** 直接從已載入的資料算出分類清單（不打 API，最可靠也最快） */
+  function buildDxCategories() {
+    const counts = {};
+    (dxState.allItems || []).forEach(it => {
+      const c = String(it.category || '').trim();
+      if (c) counts[c] = (counts[c] || 0) + 1;
+    });
+    const found = Object.keys(counts);
+    // 先照固定順序排，未在清單中的接在後面（依字典序）
+    const ordered = DX_CATEGORY_ORDER.filter(n => counts[n])
+      .concat(found.filter(n => DX_CATEGORY_ORDER.indexOf(n) < 0).sort());
+
+    dxState.categories = ordered.map(n => ({ name: n, count: counts[n] }));
+
+    const ul = document.getElementById('dx-cat-list');
+    const total = (dxState.allItems || []).length;
+    ul.innerHTML =
+      `<li class="${dxState.category ? '' : 'active'}" data-cat="">全部 <span style="opacity:.55;font-size:11px">(${total})</span></li>` +
+      ordered.map(n =>
+        `<li class="${dxState.category === n ? 'active' : ''}" data-cat="${escapeHtml(n)}">${escapeHtml(n)} <span style="opacity:.55;font-size:11px">(${counts[n]})</span></li>`
+      ).join('');
+
+    ul.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => {
+        ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
+        li.classList.add('active');
+        dxState.category = li.dataset.cat;
+        searchDx();
       });
-    } catch (err) { console.warn(err); }
+    });
   }
+
+  // 保留舊名稱以相容既有呼叫
+  async function loadDxCategories() { buildDxCategories(); }
 
   async function searchDx() {
     // 確保資料已載入（首次會下載並存 localStorage，之後秒開）
@@ -1139,6 +1163,9 @@
         '<div class="empty"><div class="empty-icon">⚠️</div><div>資料載入失敗：' + escapeHtml(err.message) + '</div></div>';
       return;
     }
+
+    // 資料就緒後建立分類清單（只建一次）
+    if (!dxState.categories.length) buildDxCategories();
 
     // 本地過濾（瞬間完成）
     const q = dxState.q.toLowerCase();
@@ -1202,6 +1229,7 @@
     dxState.dataReady = false;
     dxState.allItems = null;
     dxState.version = null;
+    dxState.categories = [];   // 讓分類清單重建
     await searchDx();
     if (dxState.dataReady) alert('已重新載入 ' + dxState.allItems.length.toLocaleString() + ' 筆資料');
   }
@@ -1228,11 +1256,8 @@
       loadMedCategories();
       searchMed();
     }
-    if (tab === 'diagnosis' && !dxState.categories.length) {
-      (async () => {
-        await searchDx();          // 先載資料 + 顯示全部
-        await loadDxCategories();  // 再補上側欄分類
-      })();
+    if (tab === 'diagnosis' && !dxState.dataReady) {
+      searchDx();   // 載入資料 → 自動建分類 → 顯示全部
     }
   });
 
