@@ -187,11 +187,18 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 11px;
   }
-  /* 金鶯常用紅色標籤 */
+  /* 金鶯用法紅色標籤（直接顯示內容）*/
   .chip-elite {
     background: #dc2626; color: #fff; font-weight: 600;
     padding: 2px 9px; font-size: 12px;
     box-shadow: 0 1px 3px rgba(220,38,38,.3);
+    max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* 磨粉藍色標籤 */
+  .chip-grind {
+    background: #2563eb; color: #fff; font-weight: 600;
+    padding: 2px 9px; font-size: 12px;
+    box-shadow: 0 1px 3px rgba(37,99,235,.3);
   }
   /* 金鶯用法紅框（詳細頁）*/
   .elite-usage-box {
@@ -689,7 +696,8 @@
           </div>
           <div class="name-en">${escapeHtml(d.name_en || '')}</div>
           <div class="meta">
-            ${_isEliteCommon(d) ? `<span class="chip chip-elite">⭐ 金鶯常用</span>` : ''}
+            ${d.elite_usage ? `<span class="chip chip-elite" title="${escapeHtml(d.elite_usage)}">${escapeHtml(d.elite_usage)}</span>` : ''}
+            ${d.grindable ? `<span class="chip chip-grind">${escapeHtml(d.grindable)}</span>` : ''}
             ${d.dosage_form ? `<span class="chip">${escapeHtml(d.dosage_form)}${d.strength ? ' ' + escapeHtml(d.strength) : ''}</span>` : ''}
             ${d.category ? `<span class="chip">${escapeHtml(d.category)}</span>` : ''}
           </div>
@@ -715,7 +723,7 @@
           <div class="sub">${escapeHtml(d.name_en || '')}</div>
           ${d.generic_name ? `<div class="sub"><em>學名：${escapeHtml(d.generic_name)}</em></div>` : ''}
           <div class="codes">
-            ${_isEliteCommon(d) ? `<span class="chip chip-elite">⭐ 金鶯常用</span>` : ''}
+            ${d.grindable ? `<span class="chip chip-grind">${escapeHtml(d.grindable)}</span>` : ''}
             ${d.nhi_code ? `<span class="chip">健保 ${escapeHtml(d.nhi_code)}</span>` : ''}
             ${d.product_code ? `<span class="chip">院內 ${escapeHtml(d.product_code)}</span>` : ''}
             ${d.category ? `<span class="chip">${escapeHtml(d.category)}</span>` : ''}
@@ -767,10 +775,6 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function _isEliteCommon(d) {
-    const v = String(d && d.elite_common || '').trim().toLowerCase();
-    return v === 'y' || v === 'yes' || v === '1' || v === 'true' || v === '是' || v === '常用' || v === '⭐';
-  }
 
   // events
   const input = document.getElementById('search-input');
