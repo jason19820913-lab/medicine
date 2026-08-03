@@ -691,14 +691,17 @@
 
       <h4 class="form-sec" style="background:#fef2f2;color:#dc2626;">⭐ 金鶯專屬</h4>
       <div class="field">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="f-elite_common" style="width:16px;height:16px;">
-          <span>標記為「金鶯常用藥品」（前台會顯示紅色標籤）</span>
-        </label>
+        <label>金鶯用法 <span style="font-size:11px;color:#dc2626;">（會以紅色標籤顯示在前台卡片與詳細頁）</span></label>
+        <textarea id="f-elite_usage" placeholder="例：QD / 1# BID 飯後 / 兒童每次半錠..." style="border-color:#fecaca;"></textarea>
       </div>
       <div class="field">
-        <label>金鶯用法 <span style="font-size:11px;color:#dc2626;">（顯示在前台詳細頁最上方紅框）</span></label>
-        <textarea id="f-elite_usage" placeholder="例：本院常用 1# BID 飯後、對於過敏性鼻炎兒童每次半錠..." style="border-color:#fecaca;"></textarea>
+        <label>磨粉 <span style="font-size:11px;color:#2563eb;">（會以藍色標籤顯示在前台）</span></label>
+        <div style="display:flex;gap:8px;" id="grind-toggle">
+          <button type="button" class="btn" data-val="" onclick="setGrind('')">未設定</button>
+          <button type="button" class="btn" data-val="磨粉" onclick="setGrind('磨粉')">可磨粉</button>
+          <button type="button" class="btn" data-val="不可磨粉" onclick="setGrind('不可磨粉')">不可磨粉</button>
+        </div>
+        <input type="hidden" id="f-grindable">
       </div>
 
       <h4 class="form-sec">臨床資料</h4>
@@ -1000,16 +1003,12 @@
     document.getElementById('drug-modal-title').textContent = id ? '編輯藥品' : '新增藥品';
     ['name_zh','name_en','generic_name','category','nhi_code','product_code',
      'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
-     'elite_usage','mechanism','indications','dosage','max_dose','side_effects',
+     'elite_usage','grindable','mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
      'status','photo_url','photo_file_id']
      .forEach(k => { const el = document.getElementById('f-' + k); if (el) el.value = d[k] || (k === 'status' ? 'active' : ''); });
-    // checkbox: 金鶯常用
-    const eliteChk = document.getElementById('f-elite_common');
-    if (eliteChk) {
-      const v = String(d.elite_common || '').trim().toLowerCase();
-      eliteChk.checked = (v === 'y' || v === 'yes' || v === '1' || v === 'true' || v === '是' || v === '常用' || v === '⭐');
-    }
+    // 磨粉 toggle 狀態
+    setGrind(d.grindable || '');
 
     // 分類下拉
     const sel = document.getElementById('f-category');
@@ -1034,11 +1033,10 @@
     const payload = {};
     ['name_zh','name_en','generic_name','category','nhi_code','product_code',
      'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
-     'elite_usage','mechanism','indications','dosage','max_dose','side_effects',
+     'elite_usage','grindable','mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
      'status','photo_url','photo_file_id']
      .forEach(k => payload[k] = document.getElementById('f-' + k).value);
-    payload.elite_common = document.getElementById('f-elite_common').checked ? 'Y' : '';
     if (!payload.name_zh) return toast('中文商品名必填', 'err');
     if (state.editingDrug) payload.id = state.editingDrug.id;
     try {
@@ -1546,6 +1544,17 @@
     document.getElementById(id).addEventListener('input', () => renderMedCodes('lab_test'));
     document.getElementById(id).addEventListener('change', () => renderMedCodes('lab_test'));
   });
+
+  // 磨粉三段切換
+  function setGrind(val) {
+    document.getElementById('f-grindable').value = val;
+    document.querySelectorAll('#grind-toggle button').forEach(b => {
+      const active = b.dataset.val === val;
+      b.style.background = active ? (val === '不可磨粉' ? '#dc2626' : val === '磨粉' ? '#2563eb' : 'var(--primary)') : '';
+      b.style.color = active ? '#fff' : '';
+    });
+  }
+  window.setGrind = setGrind;
 
   // ============ Helpers ============
   function openModal(id) { document.getElementById(id).classList.add('show'); }
