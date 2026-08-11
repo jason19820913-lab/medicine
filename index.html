@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Elite Clinic 處方集 · 醫令 · 診斷碼查詢</title>
+<title>金鶯診所 藥品集、醫令、診斷碼查詢系統</title>
 <style>
   :root {
     --primary: #1FAE9F;
@@ -194,6 +194,51 @@
     box-shadow: 0 1px 3px rgba(220,38,38,.3);
     max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  /* ============ 員工登入 overlay ============ */
+  .emp-login-mask {
+    position: fixed; inset: 0; z-index: 500;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .emp-login-mask.hidden { display: none; }
+  .emp-login-box {
+    background: #fff; border-radius: 14px; padding: 38px 34px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    text-align: center;
+  }
+  .emp-login-box .logo {
+    width: 110px; height: 110px; border-radius: 22px;
+    margin: 0 auto 16px; overflow: hidden;
+    box-shadow: 0 6px 18px rgba(31,174,159,.25);
+  }
+  .emp-login-box .logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .emp-login-box h2 { margin: 0 0 4px; font-size: 19px; color: var(--primary-dark); line-height: 1.4; }
+  .emp-login-box .sub { font-size: 13px; color: var(--text-mute); margin-bottom: 24px; }
+  .emp-login-box input {
+    width: 100%; box-sizing: border-box;
+    padding: 11px 14px; margin-bottom: 12px;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: 16px; outline: none; font-family: inherit;
+  }
+  .emp-login-box input:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31,174,159,.12);
+  }
+  .emp-login-box button {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    background: var(--primary); color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: background .15s;
+  }
+  .emp-login-box button:hover { background: var(--primary-dark); }
+  .emp-login-box button:disabled { opacity: .6; cursor: wait; }
+  .emp-login-err { color: #dc2626; font-size: 13px; min-height: 20px; margin-top: 10px; }
+  .emp-logout {
+    color: #fff; opacity: .85; font-size: 13px; cursor: pointer;
+    padding: 4px 10px; border-radius: 6px;
+  }
+  .emp-logout:hover { opacity: 1; background: rgba(255,255,255,.12); }
+
   /* 規格標籤（淡灰藍，與分類區隔）*/
   .chip-spec {
     background: #f1f5f9; color: #475569;
@@ -524,19 +569,37 @@
 </head>
 <body>
 
+<!-- 員工登入 overlay -->
+<div class="emp-login-mask" id="emp-login">
+  <div class="emp-login-box">
+    <div class="logo"><img src="logo.png" alt="金鶯診所"></div>
+    <h2>金鶯診所<br>藥品集、醫令、診斷碼查詢系統</h2>
+    <div class="sub">請以員工編號登入</div>
+    <form id="emp-login-form">
+      <input type="text" id="emp-id" placeholder="員工編號" autocomplete="username" required>
+      <input type="password" id="emp-pwd" placeholder="密碼" autocomplete="current-password" required>
+      <button type="submit" id="emp-login-btn">登入</button>
+      <div class="emp-login-err" id="emp-login-err"></div>
+    </form>
+  </div>
+</div>
+
 <header>
   <div class="container header-row">
     <div class="brand">
       <div class="logo-icon"><img src="logo.png" alt="Elite Clinic"></div>
       <div>
-        <h1 id="site-title">Elite Clinic 處方集 · 醫令 · 診斷碼查詢</h1>
+        <h1 id="site-title">金鶯診所 藥品集 · 醫令 · 診斷碼查詢系統</h1>
         <div class="subtitle">Drug Formulary · Medical Order · Diagnosis Code</div>
       </div>
     </div>
-    <div class="tabs" id="top-tabs">
-      <button data-tab="drugs" class="active">藥品</button>
-      <button data-tab="medcodes">醫令代碼</button>
-      <button data-tab="diagnosis">診斷代碼</button>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div class="tabs" id="top-tabs">
+        <button data-tab="drugs" class="active">藥品</button>
+        <button data-tab="medcodes">醫令代碼</button>
+        <button data-tab="diagnosis">診斷代碼</button>
+      </div>
+      <span class="emp-logout" id="emp-logout-btn" title="登出" style="display:none;">登出</span>
     </div>
   </div>
 </header>
@@ -655,7 +718,7 @@
 <script>
   // ============ 設定（請修改）============
   const API_URL = 'https://script.google.com/macros/s/AKfycbyBurrw2JPcBLflnXHJnTsmbYtkwpNIiXWz9t-HZtxZtWHJ5Jyyxr1JzN9aGYf4MKeLIA/exec';
-  const SITE_TITLE = 'Elite Clinic 處方集 · 醫令 · 診斷碼查詢';
+  const SITE_TITLE = '金鶯診所 藥品集 · 醫令 · 診斷碼查詢系統';
   // =====================================
 
   document.getElementById('site-title').textContent = SITE_TITLE;
@@ -1268,9 +1331,78 @@
     }
   });
 
-  // init
-  loadCategories();
-  search();
+  // ============ 員工登入 ============
+  const EMP_KEY = 'emp_session_v1';
+  const EMP_TTL = 6 * 60 * 60 * 1000;   // 6 小時（與後端 token 效期一致）
+
+  function getEmpSession() {
+    try {
+      const raw = localStorage.getItem(EMP_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !s.token || (Date.now() - s.ts > EMP_TTL)) return null;
+      return s;
+    } catch (e) { return null; }
+  }
+
+  function showApp() {
+    document.getElementById('emp-login').classList.add('hidden');
+    document.getElementById('emp-logout-btn').style.display = '';
+    // 登入後才開始載入資料
+    loadCategories();
+    search();
+  }
+
+  function showLogin() {
+    document.getElementById('emp-login').classList.remove('hidden');
+    document.getElementById('emp-logout-btn').style.display = 'none';
+    setTimeout(() => document.getElementById('emp-id').focus(), 100);
+  }
+
+  document.getElementById('emp-login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('emp-login-btn');
+    const errEl = document.getElementById('emp-login-err');
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = '登入中...';
+    try {
+      const data = await api('employeeLogin', {
+        emp_id: document.getElementById('emp-id').value.trim(),
+        password: document.getElementById('emp-pwd').value
+      });
+      localStorage.setItem(EMP_KEY, JSON.stringify({ token: data.token, emp_id: data.emp_id, ts: Date.now() }));
+      showApp();
+    } catch (err) {
+      errEl.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '登入';
+    }
+  });
+
+  document.getElementById('emp-logout-btn').addEventListener('click', () => {
+    if (!confirm('確定要登出？')) return;
+    try { localStorage.removeItem(EMP_KEY); } catch (e) {}
+    location.reload();
+  });
+
+  // init：有有效 session 直接進入，否則顯示登入頁
+  (function initApp() {
+    const session = getEmpSession();
+    if (session) {
+      showApp();
+      // 背景驗證 token 是否仍有效（不擋畫面）
+      api('employeeVerify', { emp_token: session.token }).then(r => {
+        if (!r.valid) {
+          localStorage.removeItem(EMP_KEY);
+          showLogin();
+        }
+      }).catch(() => { /* 網路異常時不強制登出 */ });
+    } else {
+      showLogin();
+    }
+  })();
 </script>
 </body>
 </html>
