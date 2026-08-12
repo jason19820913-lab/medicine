@@ -585,7 +585,22 @@
   <div class="emp-login-box">
     <div class="logo"><img src="logo.png" alt="金鶯診所"></div>
     <h2>金鶯診所<br>藥品集、醫令、診斷碼查詢系統</h2>
-    <div class="sub">請以員工編號登入</div>
+    <div class="sub" id="emp-login-sub">請以員工編號登入</div>
+
+    <!-- Google 閘門區（啟用 GOOGLE_CLIENT_ID 後才顯示）-->
+    <div id="gate-checking" style="display:none;padding:16px 0;color:var(--text-mute);font-size:14px;">
+      <div class="spinner" style="margin:0 auto 10px;"></div>
+      正在確認院區授權...
+    </div>
+    <div id="gate-blocked" style="display:none;">
+      <div style="background:#fef2f2;border-radius:8px;padding:14px;font-size:13.5px;color:#b91c1c;line-height:1.7;margin-bottom:14px;">
+        本系統僅限院區授權之 Google 帳號使用。<br>
+        請以院區指定帳號登入 Google 後重試。
+      </div>
+      <div id="gate-signin-btn" style="display:flex;justify-content:center;margin-bottom:8px;"></div>
+      <div class="emp-login-err" id="gate-err"></div>
+    </div>
+
     <form id="emp-login-form">
       <input type="text" id="emp-id" placeholder="員工編號" autocomplete="username" required>
       <input type="password" id="emp-pwd" placeholder="密碼" autocomplete="current-password" required>
@@ -1390,6 +1405,83 @@
     }
   });
 
+  // ============ Google 帳號閘門 ============
+  // 啟用方式：填入 OAuth Client ID（Google Cloud Console 申請），
+  // 並將 Code.gs 的 GOOGLE_LOGIN_REQUIRED 改為 true、填入白名單 email
+  const GOOGLE_CLIENT_ID = '';   // 例：'123456789-xxxx.apps.googleusercontent.com'
+
+  let gateCredential = '';   // 通過閘門的 Google credential（登入時一併送出）
+
+  function gateUI(state) {
+    // state: 'checking' | 'blocked' | 'pass'
+    document.getElementById('gate-checking').style.display = state === 'checking' ? '' : 'none';
+    document.getElementById('gate-blocked').style.display = state === 'blocked' ? '' : 'none';
+    document.getElementById('emp-login-form').style.display = state === 'pass' ? '' : 'none';
+    document.getElementById('emp-login-sub').textContent =
+      state === 'pass' ? '請以員工編號登入' :
+      state === 'blocked' ? '未授權的環境' : '院區授權驗證';
+  }
+
+  function loadGisScript() {
+    return new Promise((resolve, reject) => {
+      if (window.google && google.accounts) return resolve();
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('無法載入 Google 登入元件'));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function runGoogleGate() {
+    if (!GOOGLE_CLIENT_ID) { gateUI('pass'); return; }   // 未啟用 → 直接顯示員工登入
+    gateUI('checking');
+    try {
+      await loadGisScript();
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        auto_select: true,               // 瀏覽器已登入且曾授權 → 自動通過不用點
+        callback: onGateCredential
+      });
+      // 嘗試自動 One Tap；失敗（未登入/未授權/被關閉）就顯示手動按鈕
+      google.accounts.id.prompt((n) => {
+        if (n.isNotDisplayed && n.isNotDisplayed() || n.isSkippedMoment && n.isSkippedMoment()) {
+          showGateBlocked();
+        }
+      });
+    } catch (err) {
+      showGateBlocked(err.message);
+    }
+  }
+
+  function showGateBlocked(msg) {
+    gateUI('blocked');
+    document.getElementById('gate-err').textContent = msg || '';
+    // 渲染手動 Google 登入按鈕
+    try {
+      google.accounts.id.renderButton(
+        document.getElementById('gate-signin-btn'),
+        { theme: 'outline', size: 'large', text: 'signin_with', locale: 'zh_TW' }
+      );
+    } catch (e) {}
+  }
+
+  async function onGateCredential(response) {
+    gateUI('checking');
+    try {
+      const r = await api('googleGate', { credential: response.credential });
+      if (r.pass) {
+        gateCredential = response.credential;
+        gateUI('pass');
+        setTimeout(() => document.getElementById('emp-id').focus(), 100);
+      } else {
+        showGateBlocked('此帳號未獲授權');
+      }
+    } catch (err) {
+      showGateBlocked(err.message);
+    }
+  }
+
   // ============ 員工登入 ============
   const EMP_KEY = 'emp_session_v1';
   const EMP_TTL = 6 * 60 * 60 * 1000;   // 6 小時（與後端 token 效期一致）
@@ -1429,7 +1521,14 @@
   function showLogin() {
     document.getElementById('emp-login').classList.remove('hidden');
     document.getElementById('emp-logout-btn').style.display = 'none';
+    runGoogleGate();   // 啟用 Google 閘門時：先驗證瀏覽器帳號；未啟用：直接顯示員工登入
     setTimeout(() => document.getElementById('emp-id').focus(), 100);
+
+    // ===== 暖機 + 預抓：使用者輸入帳密的同時，背景把該做的都先做完 =====
+    // 1. 喚醒 Apps Script + 預載員工帳密快取（讓按下登入時 < 1 秒回應）
+    api('warmup').catch(() => {});
+    // 2. 預抓藥品資料（登入完成後畫面即秒開）
+    ensureDrugData().catch(() => {});
   }
 
   document.getElementById('emp-login-form').addEventListener('submit', async (e) => {
@@ -1442,7 +1541,8 @@
     try {
       const data = await api('employeeLogin', {
         emp_id: document.getElementById('emp-id').value.trim(),
-        password: document.getElementById('emp-pwd').value
+        password: document.getElementById('emp-pwd').value,
+        google_credential: gateCredential || undefined
       });
       localStorage.setItem(EMP_KEY, JSON.stringify({ token: data.token, emp_id: data.emp_id, ts: Date.now() }));
       try { sessionStorage.removeItem('notice_accepted'); } catch (e) {}
