@@ -18,6 +18,17 @@
     --shadow: 0 1px 3px rgba(20,80,70,.06), 0 1px 2px rgba(20,80,70,.04);
   }
   * { box-sizing: border-box; }
+
+  /* ===== 資料保護：全面禁止反白選取 ===== */
+  body {
+    -webkit-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    -webkit-touch-callout: none;   /* iOS 長按選單 */
+  }
+  /* 輸入框保留可輸入（但貼上仍被 JS 擋掉）*/
+  input, textarea { -webkit-user-select: text; user-select: text; }
+  /* 圖片禁止拖曳另存 */
+  img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
   body {
     margin: 0;
     font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, -apple-system, sans-serif;
@@ -584,6 +595,25 @@
   </div>
 </div>
 
+<!-- 版權警語 modal（登入後顯示）-->
+<div class="modal-mask" id="notice-modal" style="z-index:400;">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-content" style="padding:30px;">
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="font-size:38px;margin-bottom:6px;">⚠️</div>
+        <h2 style="margin:0;font-size:20px;color:#b91c1c;">使用聲明與資料保護警語</h2>
+      </div>
+      <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:8px;padding:16px 18px;font-size:14px;line-height:1.9;color:#7f1d1d;">
+        <p style="margin:0 0 10px;">本系統所載之藥品集、醫令代碼、診斷代碼及相關臨床資訊，<strong>版權均屬金鶯診所所有</strong>，僅供本院區內部醫療業務使用。</p>
+        <p style="margin:0;">未經金鶯診所書面同意，<strong>嚴禁以任何形式複製、翻拍、截圖、轉傳、外流或提供予第三人使用</strong>。</p>
+      </div>
+      <button onclick="acceptNotice()" style="width:100%;margin-top:18px;padding:12px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">
+        我已閱讀並同意遵守上述規定
+      </button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="container header-row">
     <div class="brand">
@@ -720,6 +750,21 @@
   const API_URL = 'https://script.google.com/macros/s/AKfycbyBurrw2JPcBLflnXHJnTsmbYtkwpNIiXWz9t-HZtxZtWHJ5Jyyxr1JzN9aGYf4MKeLIA/exec';
   const SITE_TITLE = '金鶯診所 藥品集 · 醫令 · 診斷碼查詢系統';
   // =====================================
+
+  // ===== 資料保護：禁右鍵 / 複製 / 剪下 / 貼上 / 拖曳 / 列印快捷鍵 =====
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  ['copy', 'cut', 'paste', 'dragstart'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault())
+  );
+  document.addEventListener('keydown', e => {
+    const k = (e.key || '').toLowerCase();
+    const mod = e.ctrlKey || e.metaKey;
+    // Ctrl/Cmd + C X V S P U A（複製剪貼、另存、列印、原始碼、全選）
+    if (mod && ['c', 'x', 'v', 's', 'p', 'u', 'a'].indexOf(k) >= 0) { e.preventDefault(); return; }
+    // F12 / Ctrl+Shift+I/J/C（開發者工具）
+    if (k === 'f12') { e.preventDefault(); return; }
+    if (mod && e.shiftKey && ['i', 'j', 'c'].indexOf(k) >= 0) { e.preventDefault(); return; }
+  });
 
   document.getElementById('site-title').textContent = SITE_TITLE;
   document.title = SITE_TITLE;
@@ -1362,10 +1407,24 @@
   function showApp() {
     document.getElementById('emp-login').classList.add('hidden');
     document.getElementById('emp-logout-btn').style.display = '';
+    // 版權警語：每個瀏覽器工作階段顯示一次
+    try {
+      if (!sessionStorage.getItem('notice_accepted')) {
+        document.getElementById('notice-modal').classList.add('show');
+      }
+    } catch (e) {
+      document.getElementById('notice-modal').classList.add('show');
+    }
     // 登入後才開始載入資料
     loadCategories();
     search();
   }
+
+  function acceptNotice() {
+    try { sessionStorage.setItem('notice_accepted', '1'); } catch (e) {}
+    document.getElementById('notice-modal').classList.remove('show');
+  }
+  window.acceptNotice = acceptNotice;
 
   function showLogin() {
     document.getElementById('emp-login').classList.remove('hidden');
@@ -1386,6 +1445,7 @@
         password: document.getElementById('emp-pwd').value
       });
       localStorage.setItem(EMP_KEY, JSON.stringify({ token: data.token, emp_id: data.emp_id, ts: Date.now() }));
+      try { sessionStorage.removeItem('notice_accepted'); } catch (e) {}
       showApp();
     } catch (err) {
       errEl.textContent = err.message;
