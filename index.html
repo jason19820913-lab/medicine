@@ -780,6 +780,11 @@
         ul.querySelectorAll('li').forEach(l => l.classList.remove('active'));
         e.target.classList.add('active');
         state.category = e.target.dataset.cat;
+        // 選分類時自動清空搜尋文字（分類與搜尋互斥）
+        if (state.q) {
+          state.q = '';
+          document.getElementById('search-input').value = '';
+        }
         search();
       });
     } catch (err) {
@@ -816,9 +821,16 @@
     try {
       await ensureDrugData();
       const q = state.q.toLowerCase();
-      // 有搜尋文字時 → 全庫搜尋（忽略分類，但保留側欄選取狀態）
-      // 清空搜尋文字後 → 回到原本選取的分類
-      const cat = q ? '' : state.category;
+      // 有搜尋文字時 → 全庫搜尋，分類跳回「全部」
+      if (q && state.category) {
+        state.category = '';
+      }
+      if (q) {
+        document.querySelectorAll('#cat-list li').forEach(li => {
+          li.classList.toggle('active', li.dataset.cat === '');
+        });
+      }
+      const cat = state.category;
       const t0 = performance.now();
       state.items = drugAll.filter(d => {
         if (cat && d.category !== cat) return false;
