@@ -250,6 +250,29 @@
   }
   .emp-logout:hover { opacity: 1; background: rgba(255,255,255,.12); }
 
+  /* 可雙擊複製的元素 */
+  .copyable {
+    cursor: copy;
+    border-bottom: 1px dashed var(--primary);
+    transition: background .15s, color .15s;
+  }
+  .copyable:hover {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+  }
+  /* 複製成功提示 */
+  .copy-toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #16a34a; color: #fff;
+    padding: 10px 22px; border-radius: 24px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: 0 8px 20px rgba(22,163,74,.35);
+    transition: transform .25s ease-out;
+    z-index: 1000; pointer-events: none;
+  }
+  .copy-toast.show { transform: translateX(-50%) translateY(0); }
+
   /* 規格標籤（淡灰藍，與分類區隔）*/
   .chip-spec {
     background: #f1f5f9; color: #475569;
@@ -768,8 +791,9 @@
 
   // ===== 資料保護：禁右鍵 / 複製 / 剪下 / 貼上 / 拖曳 / 列印快捷鍵 =====
   document.addEventListener('contextmenu', e => e.preventDefault());
+  window.__allowCopy = false;   // 系統內建「雙擊複製」功能的豁免旗標
   ['copy', 'cut', 'paste', 'dragstart'].forEach(ev =>
-    document.addEventListener(ev, e => e.preventDefault())
+    document.addEventListener(ev, e => { if (!window.__allowCopy) e.preventDefault(); })
   );
   document.addEventListener('keydown', e => {
     const k = (e.key || '').toLowerCase();
@@ -960,14 +984,15 @@
         </div>
         <div class="modal-title">
           <h2>${escapeHtml(d.name_zh || '')}</h2>
-          <div class="sub">${escapeHtml(d.name_en || '')}</div>
+          ${d.name_en ? `<div class="sub"><span class="copyable" data-copy="${escapeHtml(d.name_en)}" title="雙擊複製英文名，可貼到展望醫囑">${escapeHtml(d.name_en)}</span></div>` : ''}
           ${d.generic_name ? `<div class="sub"><em>學名：${escapeHtml(d.generic_name)}</em></div>` : ''}
           <div class="codes">
             ${d.grindable ? `<span class="chip chip-grind">${escapeHtml(d.grindable)}</span>` : ''}
             ${d.nhi_code ? `<span class="chip">健保 ${escapeHtml(d.nhi_code)}</span>` : ''}
-            ${d.product_code ? `<span class="chip">院內 ${escapeHtml(d.product_code)}</span>` : ''}
+            ${d.product_code ? `<span class="chip copyable" data-copy="${escapeHtml(d.product_code)}" title="雙擊複製院內代碼">院內 ${escapeHtml(d.product_code)}</span>` : ''}
             ${d.category ? `<span class="chip">${escapeHtml(d.category)}</span>` : ''}
           </div>
+          <div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;">💡 雙擊英文名或院內代碼可複製，切到看診系統按 Ctrl+V 貼上</div>
         </div>
       </div>
       ${d.elite_usage ? `
@@ -1001,6 +1026,49 @@
   function sec(title, content, wide) {
     if (!content) return '';
     return `<div class="section ${wide ? 'wide' : ''}"><h4>${title}</h4><p>${escapeHtml(content)}</p></div>`;
+  }
+
+  // ============ 雙擊複製（供展望等看診系統貼上）============
+  document.getElementById('modal').addEventListener('dblclick', async (e) => {
+    const el = e.target.closest('.copyable');
+    if (!el) return;
+    const text = el.dataset.copy || '';
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showCopyToast('已複製「' + text + '」，可至看診系統按 Ctrl+V 貼上');
+    } catch (err) {
+      // 剪貼簿 API 失敗時的備援：用暫時 input（暫時豁免防複製保護）
+      try {
+        window.__allowCopy = true;
+        const tmp = document.createElement('input');
+        tmp.value = text;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        tmp.remove();
+        showCopyToast('已複製「' + text + '」');
+      } catch (e2) {
+        showCopyToast('複製失敗，請手動輸入');
+      } finally {
+        window.__allowCopy = false;
+      }
+    }
+  });
+
+  let copyToastTimer;
+  function showCopyToast(msg) {
+    let t = document.getElementById('copy-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'copy-toast';
+      t.className = 'copy-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    requestAnimationFrame(() => t.classList.add('show'));
+    clearTimeout(copyToastTimer);
+    copyToastTimer = setTimeout(() => t.classList.remove('show'), 2500);
   }
 
   function closeModal() { document.getElementById('modal').classList.remove('show'); }
