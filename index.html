@@ -250,6 +250,97 @@
   }
   .emp-logout:hover { opacity: 1; background: rgba(255,255,255,.12); }
 
+  /* ============ 組套頁 ============ */
+  .set-picker {
+    max-width: 800px; margin: 12px auto 0;
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .set-picker button {
+    padding: 8px 20px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); border-radius: 20px;
+    cursor: pointer; font-size: 14.5px; font-weight: 600; font-family: inherit;
+  }
+  .set-picker button:hover { background: var(--primary-soft); }
+  .set-picker button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .set-card {
+    background: var(--card); border-radius: 12px; box-shadow: var(--shadow);
+    padding: 24px 26px; max-width: 1000px; margin: 0 auto;
+  }
+  .set-head {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 4px; flex-wrap: wrap;
+  }
+  .set-head .set-badge {
+    width: 56px; height: 56px; border-radius: 12px;
+    background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; letter-spacing: 1px;
+  }
+  .set-head h2 { margin: 0; font-size: 22px; }
+  .set-head .set-en { color: var(--text-mute); font-size: 13px; margin-top: 2px; }
+  .set-head .set-usage {
+    margin-left: auto; text-align: right; font-size: 12.5px; color: var(--text-mute); line-height: 1.6;
+  }
+  .set-special {
+    background: #fffbeb; border-left: 4px solid #f59e0b; color: #92400e;
+    padding: 10px 14px; border-radius: 6px; font-size: 13.5px; margin: 12px 0;
+  }
+  .set-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  .set-table th {
+    background: var(--primary); color: #fff; text-align: left;
+    padding: 10px 12px; font-size: 13px; font-weight: 600;
+  }
+  .set-table th:first-child { border-radius: 8px 0 0 0; }
+  .set-table th:last-child { border-radius: 0 8px 0 0; }
+  .set-table td {
+    padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 14px;
+    vertical-align: middle;
+  }
+  .set-table tr:nth-child(even) td { background: #f7faf9; }
+  .set-table .si-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 700; color: var(--primary-dark); font-size: 14.5px;
+  }
+  .set-table .si-name { font-weight: 600; }
+  .set-table .si-generic { font-size: 12px; color: var(--text-mute); margin-top: 1px; }
+  .set-table .si-freq {
+    display: inline-block; background: var(--primary-soft); color: var(--primary-dark);
+    padding: 2px 10px; border-radius: 12px; font-size: 12.5px; font-weight: 600;
+  }
+  .set-table .si-freq.prn { background: #ffedd5; color: #c2410c; }
+  .set-table .si-class {
+    display: inline-block; background: #eef4fa; color: #1e40af;
+    padding: 2px 10px; border-radius: 12px; font-size: 12.5px;
+  }
+  .prn-divider td {
+    background: #f1f5f9 !important; height: 6px; padding: 0 !important;
+    border-bottom: none;
+  }
+  /* 勾稽狀態 */
+  .si-flag {
+    display: inline-block; padding: 1px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; margin-left: 6px; vertical-align: middle;
+  }
+  .si-flag.discontinued { background: #dc2626; color: #fff; }
+  .si-flag.replaced { background: #2563eb; color: #fff; }
+  .si-flag.notfound { background: #e2e8f0; color: #64748b; }
+  tr.row-discontinued td { background: #fef2f2 !important; }
+  tr.row-discontinued .si-name, tr.row-discontinued .si-code { color: #b91c1c; text-decoration: line-through; }
+  .set-thinking {
+    margin-top: 22px; background: #f0faf7; border-radius: 10px; padding: 18px 20px;
+  }
+  .set-thinking h3 {
+    margin: 0 0 10px; font-size: 15px; color: var(--primary-dark);
+  }
+  .set-thinking ol { margin: 0; padding-left: 22px; }
+  .set-thinking li { font-size: 13.5px; line-height: 1.9; color: var(--text); margin-bottom: 4px; }
+
+  @media (max-width: 768px) {
+    .set-card { padding: 16px 14px; }
+    .set-head .set-usage { margin-left: 0; text-align: left; width: 100%; }
+    .set-table th, .set-table td { padding: 8px 8px; font-size: 12.5px; }
+    .set-table .si-generic { font-size: 11px; }
+  }
+
   /* 可雙擊複製的元素 */
   .copyable {
     cursor: copy;
@@ -664,6 +755,7 @@
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <div class="tabs" id="top-tabs">
         <button data-tab="drugs" class="active">藥品</button>
+        <button data-tab="sets">組套</button>
         <button data-tab="medcodes">醫令代碼</button>
         <button data-tab="diagnosis">診斷代碼</button>
       </div>
@@ -771,6 +863,23 @@
         </div>
         <div id="dx-results" class="med-list"></div>
       </section>
+    </div>
+  </main>
+</div>
+
+<!-- 組套分頁 -->
+<div class="tab-panel hidden" id="tab-sets">
+  <section class="search-hero" style="padding-bottom:18px;">
+    <div class="hint" style="margin-top:0;">選擇組套查看藥品內容 · 看診頁面輸入組代即可一鍵帶入</div>
+    <div class="set-picker" id="set-picker"></div>
+  </section>
+  <main>
+    <div class="container" style="padding:0 20px;">
+      <div class="toolbar" style="max-width:1000px;margin:0 auto 12px;">
+        <div class="count" id="sets-count">載入中...</div>
+        <a class="admin-link" onclick="reloadSetsData()" style="cursor:pointer;">🔄 重新載入</a>
+      </div>
+      <div id="set-content"></div>
     </div>
   </main>
 </div>
@@ -1546,6 +1655,179 @@
   dxInput.addEventListener('keydown', e => { if (e.key === 'Enter') { dxState.q = dxInput.value.trim(); searchDx(); } });
   document.getElementById('dx-btn').addEventListener('click', () => { dxState.q = dxInput.value.trim(); searchDx(); });
 
+  // ============ 組套（本地快取 + 停藥勾稽）============
+  const setsState = { sets: [], items: [], current: '', dataReady: false };
+  const SETS_CACHE_KEY = 'sets_full_v1';
+  const SETS_CACHE_TTL = 30 * 60 * 1000;
+
+  async function ensureSetsData(force) {
+    if (setsState.dataReady && !force) return;
+    if (!force) {
+      try {
+        const raw = localStorage.getItem(SETS_CACHE_KEY);
+        if (raw) {
+          const c = JSON.parse(raw);
+          if (c && c.sets && (Date.now() - c.ts < SETS_CACHE_TTL)) {
+            setsState.sets = c.sets; setsState.items = c.items;
+            setsState.dataReady = true;
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+    const data = await api('exportSets', {});
+    setsState.sets = data.sets || [];
+    setsState.items = data.items || [];
+    try {
+      localStorage.setItem(SETS_CACHE_KEY, JSON.stringify({ sets: setsState.sets, items: setsState.items, ts: Date.now() }));
+    } catch (e) {}
+    setsState.dataReady = true;
+  }
+
+  async function loadSetsTab() {
+    document.getElementById('sets-count').textContent = '載入中...';
+    try {
+      // 同時準備組套與藥品資料（勾稽需要藥品的狀態）
+      await Promise.all([ensureSetsData(), ensureDrugData()]);
+      renderSetPicker();
+      if (!setsState.current && setsState.sets.length) setsState.current = setsState.sets[0].set_code;
+      renderSet();
+    } catch (err) {
+      document.getElementById('sets-count').textContent = '錯誤：' + err.message;
+    }
+  }
+
+  function renderSetPicker() {
+    const picker = document.getElementById('set-picker');
+    picker.innerHTML = setsState.sets.map(s =>
+      `<button data-set="${escapeHtml(s.set_code)}" class="${setsState.current === s.set_code ? 'active' : ''}">${escapeHtml(s.set_code)} ${escapeHtml(s.set_name)}</button>`
+    ).join('');
+    picker.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        setsState.current = b.dataset.set;
+        picker.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        renderSet();
+      });
+    });
+  }
+
+  /** 勾稽：依 drug_code 對照藥品資料庫，回傳顯示資訊與狀態 */
+  function resolveSetItem(it) {
+    const code = String(it.drug_code || '').trim();
+    const drug = code ? (drugAll || []).find(d => String(d.product_code || '').trim() === code) : null;
+    if (!drug) {
+      return { code, name: it.fallback_name || code, generic: it.fallback_generic || '', flag: code ? 'notfound' : '', drug: null };
+    }
+    const inactive = String(drug.status || 'active').toLowerCase() === 'inactive';
+    if (!inactive) {
+      return { code, name: drug.name_en || drug.name_zh || it.fallback_name, generic: drug.generic_name || it.fallback_generic || '', flag: '', drug };
+    }
+    // 已停用 → 查 replaced_by 自動替換
+    const repCode = String(drug.replaced_by || '').trim();
+    if (repCode) {
+      const rep = (drugAll || []).find(d => String(d.product_code || '').trim() === repCode);
+      if (rep && String(rep.status || 'active').toLowerCase() !== 'inactive') {
+        return {
+          code: repCode,
+          name: rep.name_en || rep.name_zh,
+          generic: rep.generic_name || '',
+          flag: 'replaced', originalCode: code, drug: rep
+        };
+      }
+    }
+    return { code, name: drug.name_en || drug.name_zh || it.fallback_name, generic: drug.generic_name || it.fallback_generic || '', flag: 'discontinued', drug };
+  }
+
+  function renderSet() {
+    const s = setsState.sets.find(x => x.set_code === setsState.current);
+    const root = document.getElementById('set-content');
+    if (!s) { root.innerHTML = ''; return; }
+    const items = setsState.items.filter(i => i.set_code === s.set_code);
+    document.getElementById('sets-count').textContent = `${s.set_code} ${s.set_name} · 共 ${items.length} 項藥品`;
+
+    // 分常規與 PRN
+    const regular = items.filter(i => String(i.freq).toUpperCase() !== 'PRN');
+    const prn = items.filter(i => String(i.freq).toUpperCase() === 'PRN');
+
+    const rowHtml = (it, idx) => {
+      const r = resolveSetItem(it);
+      const isPrn = String(it.freq).toUpperCase() === 'PRN';
+      const flagHtml =
+        r.flag === 'discontinued' ? `<span class="si-flag discontinued">已停用</span>` :
+        r.flag === 'replaced' ? `<span class="si-flag replaced" title="原藥品 ${escapeHtml(r.originalCode)} 已停用，自動替換">已替換 (原 ${escapeHtml(r.originalCode)})</span>` :
+        r.flag === 'notfound' ? `<span class="si-flag notfound" title="此代碼未收錄於藥品集">未收錄</span>` : '';
+      return `
+        <tr class="${r.flag === 'discontinued' ? 'row-discontinued' : ''}">
+          <td style="width:36px;color:var(--text-mute);">${idx}</td>
+          <td style="width:110px;"><span class="si-code copyable" data-copy="${escapeHtml(r.code)}" title="雙擊複製代碼">${escapeHtml(r.code)}</span></td>
+          <td>
+            <div class="si-name">${escapeHtml(r.name || '')}${flagHtml}</div>
+            ${r.generic ? `<div class="si-generic">學名：${escapeHtml(r.generic)}</div>` : ''}
+          </td>
+          <td style="width:80px;">${escapeHtml(it.dose || '')}</td>
+          <td style="width:80px;"><span class="si-freq ${isPrn ? 'prn' : ''}">${escapeHtml(it.freq || '')}</span></td>
+          <td style="width:110px;">${it.class_label ? `<span class="si-class">${escapeHtml(it.class_label)}</span>` : ''}</td>
+        </tr>`;
+    };
+
+    let n = 0;
+    const bodyRows =
+      regular.map(it => rowHtml(it, ++n)).join('') +
+      (prn.length ? `<tr class="prn-divider"><td colspan="6"></td></tr>` : '') +
+      prn.map(it => rowHtml(it, ++n)).join('');
+
+    const thinkingLines = String(s.thinking || '').split('\n').filter(Boolean)
+      .map(l => l.replace(/^\d+[.、]\s*/, ''));
+
+    root.innerHTML = `
+      <div class="set-card">
+        <div class="set-head">
+          <div class="set-badge">${escapeHtml(s.set_code)}</div>
+          <div>
+            <h2>${escapeHtml(s.set_name)}</h2>
+            <div class="set-en">${escapeHtml(s.set_name_en || '')}</div>
+          </div>
+          <div class="set-usage">
+            看診頁面輸入組代「${escapeHtml(s.set_code)}」即可一鍵帶入<br>
+            ${s.default_days === '依體重' ? '次劑量依體重 · 頻率如下表' : `預設日份 ${escapeHtml(s.default_days || '3')} 天 · 單次量／頻率如下表`}
+          </div>
+        </div>
+        ${s.special_note ? `<div class="set-special">${escapeHtml(s.special_note)}</div>` : ''}
+        <table class="set-table">
+          <thead><tr>
+            <th>#</th><th>系統代碼</th><th>商品名（學名）</th><th>${s.default_days === '依體重' ? '次劑量' : '單次量'}</th><th>頻率</th><th>藥理分類</th>
+          </tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+        ${thinkingLines.length ? `
+          <div class="set-thinking">
+            <h3>💊 藥組思考 — 為什麼這樣配？</h3>
+            <ol>${thinkingLines.map(l => `<li>${escapeHtml(l)}</li>`).join('')}</ol>
+          </div>` : ''}
+      </div>`;
+
+    // 表內代碼雙擊複製
+    root.querySelectorAll('.copyable').forEach(el => {
+      el.addEventListener('dblclick', async () => {
+        const text = el.dataset.copy || '';
+        if (!text) return;
+        const payload = isAhkMode() ? 'RX::' + text : text;
+        try {
+          await navigator.clipboard.writeText(payload);
+          showCopyToast('已複製「' + text + '」');
+        } catch (e) {}
+      });
+    });
+  }
+
+  async function reloadSetsData() {
+    try { localStorage.removeItem(SETS_CACHE_KEY); } catch (e) {}
+    setsState.dataReady = false;
+    await loadSetsTab();
+  }
+  window.reloadSetsData = reloadSetsData;
+
   // ============ 頁籤切換 ============
   document.getElementById('top-tabs').addEventListener('click', e => {
     if (e.target.tagName !== 'BUTTON') return;
@@ -1559,6 +1841,9 @@
     }
     if (tab === 'diagnosis' && !dxState.dataReady) {
       searchDx();   // 載入資料 → 自動建分類 → 顯示全部
+    }
+    if (tab === 'sets' && !setsState.dataReady) {
+      loadSetsTab();
     }
   });
 
