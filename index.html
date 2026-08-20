@@ -667,6 +667,9 @@
         <button data-tab="medcodes">醫令代碼</button>
         <button data-tab="diagnosis">診斷代碼</button>
       </div>
+      <label class="emp-logout" id="ahk-toggle-wrap" title="開啟後，雙擊複製會自動貼到展望（需在電腦安裝自動貼上小工具）" style="display:none;user-select:none;">
+        <input type="checkbox" id="ahk-toggle" style="vertical-align:middle;margin-right:3px;">⚡自動貼上
+      </label>
       <span class="emp-logout" id="emp-logout-btn" title="登出" style="display:none;">登出</span>
     </div>
   </div>
@@ -1029,25 +1032,45 @@
   }
 
   // ============ 雙擊複製（供展望等看診系統貼上）============
+  // 「⚡自動貼上模式」：複製時加 RX:: 標記，讓電腦上的 AutoHotkey 小工具
+  // 偵測到後自動切至展望並貼上（沒裝小工具請勿開啟此模式）
+  const AHK_MODE_KEY = 'ahk_mode';
+  function isAhkMode() {
+    try { return localStorage.getItem(AHK_MODE_KEY) === '1'; } catch (e) { return false; }
+  }
+  (function initAhkToggle() {
+    const chk = document.getElementById('ahk-toggle');
+    if (!chk) return;
+    chk.checked = isAhkMode();
+    chk.addEventListener('change', () => {
+      try { localStorage.setItem(AHK_MODE_KEY, chk.checked ? '1' : '0'); } catch (e) {}
+      showCopyToast(chk.checked ? '已開啟自動貼上模式（需安裝小工具）' : '已關閉自動貼上模式');
+    });
+  })();
+
   document.getElementById('modal').addEventListener('dblclick', async (e) => {
     const el = e.target.closest('.copyable');
     if (!el) return;
     const text = el.dataset.copy || '';
     if (!text) return;
+    const payload = isAhkMode() ? 'RX::' + text : text;
+    const toastMsg = isAhkMode()
+      ? '已複製「' + text + '」，自動貼至看診系統中...'
+      : '已複製「' + text + '」，可至看診系統按 Ctrl+V 貼上';
     try {
-      await navigator.clipboard.writeText(text);
-      showCopyToast('已複製「' + text + '」，可至看診系統按 Ctrl+V 貼上');
+      await navigator.clipboard.writeText(payload);
+      showCopyToast(toastMsg);
     } catch (err) {
       // 剪貼簿 API 失敗時的備援：用暫時 input（暫時豁免防複製保護）
       try {
         window.__allowCopy = true;
         const tmp = document.createElement('input');
-        tmp.value = text;
+        tmp.value = payload;
         document.body.appendChild(tmp);
         tmp.select();
         document.execCommand('copy');
         tmp.remove();
-        showCopyToast('已複製「' + text + '」');
+        showCopyToast(toastMsg);
       } catch (e2) {
         showCopyToast('複製失敗，請手動輸入');
       } finally {
@@ -1633,6 +1656,7 @@
   function showApp() {
     document.getElementById('emp-login').classList.add('hidden');
     document.getElementById('emp-logout-btn').style.display = '';
+    document.getElementById('ahk-toggle-wrap').style.display = '';
     // 版權警語：每個瀏覽器工作階段顯示一次
     try {
       if (!sessionStorage.getItem('notice_accepted')) {
