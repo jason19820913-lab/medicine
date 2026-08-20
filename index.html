@@ -1276,14 +1276,15 @@
     mc.innerHTML = `
       <div style="padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:18px;">
         <div style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:700;color:${it.chronic_rx ? '#dc2626' : 'var(--primary-dark)'};letter-spacing:.5px;">
-          ${escapeHtml(primaryCode || '')}${it.chronic_rx ? `<span class="chronic-badge" style="font-size:14px;padding:4px 13px;">慢箋</span>` : ''}
+          ${primaryCode ? `<span class="copyable" data-copy="${escapeHtml(primaryCode)}" title="雙擊複製代碼，可貼到看診系統">${escapeHtml(primaryCode)}</span>` : ''}${it.chronic_rx ? `<span class="chronic-badge" style="font-size:14px;padding:4px 13px;">慢箋</span>` : ''}
         </div>
         <h2 style="margin:6px 0 0;font-size:20px;">${escapeHtml(it.name || '')}</h2>
-        ${(isDx ? it.name_en : it.product_name) ? `<div style="color:var(--text-mute);font-size:14px;margin-top:3px">${escapeHtml(isDx ? it.name_en : it.product_name)}</div>` : ''}
+        ${(isDx ? it.name_en : it.product_name) ? `<div style="color:var(--text-mute);font-size:14px;margin-top:3px"><span class="copyable" data-copy="${escapeHtml(isDx ? it.name_en : it.product_name)}" title="雙擊複製">${escapeHtml(isDx ? it.name_en : it.product_name)}</span></div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
           ${it.category ? `<span class="chip">${escapeHtml(it.category)}</span>` : ''}
           <span class="badge-src ${isLab ? 'lab' : ''}">${srcLabel}</span>
         </div>
+        <div style="font-size:11.5px;color:var(--text-mute);margin-top:8px;">💡 雙擊代碼或英文名可複製，切到看診系統按 Ctrl+V 貼上</div>
       </div>
       <div class="sections">
         ${sections}
