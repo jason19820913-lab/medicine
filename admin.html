@@ -400,6 +400,7 @@
     <nav class="nav">
       <a data-view="drugs" class="active">藥品管理</a>
       <a data-view="categories">藥品分類</a>
+      <a data-view="drugsets">組套管理</a>
       <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">代碼查詢</div>
       <a data-view="medorder">診療處置代碼</a>
       <a data-view="labtest">檢驗及自費代碼</a>
@@ -531,6 +532,33 @@
       </div>
     </div>
 
+    <!-- 組套管理 -->
+    <div class="view hidden" id="view-drugsets">
+      <div class="page-header">
+        <h2>組套管理</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="openSetEdit()">＋ 新增組套</button>
+        </div>
+      </div>
+      <div class="search-bar">
+        <select id="ds-picker" style="min-width:220px;"></select>
+        <button class="btn" onclick="openSetEdit(adminSetsState.current)">✏️ 編輯此組套</button>
+        <button class="btn" style="color:var(--danger);" onclick="confirmDelSet()">🗑 刪除此組套</button>
+        <button class="btn btn-primary" onclick="openSetItemEdit()">＋ 新增藥品項目</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-mute);margin-bottom:10px;">
+        提示：藥品代碼對應「藥品管理」的院內代碼。藥品停用時，前台組套會自動標示「已停用」；若在藥品管理設定了「取代藥品」，組套會自動替換顯示。
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:50px">序</th><th>藥品代碼</th><th>名稱（備援顯示）</th><th>劑量</th><th>頻率</th><th>藥理分類</th><th style="width:140px"></th>
+          </tr></thead>
+          <tbody id="ds-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- 診斷代碼 -->
     <div class="view hidden" id="view-diagnosis">
       <div class="page-header">
@@ -595,6 +623,58 @@
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('med-modal')">取消</button>
       <button class="btn btn-primary" onclick="saveMedCode()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 組套編輯 modal -->
+<div class="modal-mask" id="set-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="set-modal-title">新增組套</h3>
+      <button class="close" onclick="closeModal('set-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field"><label>組套代碼 *（診間 key-in 用）</label><input id="sf-set_code" placeholder="例：GA"></div>
+        <div class="field"><label>組套名稱 *</label><input id="sf-set_name" placeholder="例：成人錠劑"></div>
+        <div class="field"><label>英文名稱</label><input id="sf-set_name_en" placeholder="例：Adult Tablet Set"></div>
+        <div class="field"><label>預設日份</label><input id="sf-default_days" placeholder="例：3 或 依體重"></div>
+        <div class="field"><label>排序</label><input type="number" id="sf-sort_order" value="99"></div>
+      </div>
+      <div class="field"><label>特別提醒（黃色框，可空）</label><input id="sf-special_note" placeholder="例：⚠️ 以上藥品需磨粉，務必 key-in「P」！"></div>
+      <div class="field"><label>藥組思考（一行一點）</label><textarea id="sf-thinking" style="min-height:140px;" placeholder="1. 抗生素可依醫師診斷...&#10;2. 類固醇能在急性症狀時..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('set-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveSet()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 組套項目編輯 modal -->
+<div class="modal-mask" id="setitem-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="setitem-modal-title">新增藥品項目</h3>
+      <button class="close" onclick="closeModal('setitem-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2">
+        <div class="field"><label>藥品代碼（院內代碼）*</label><input id="sif-drug_code" placeholder="例：LCETI"></div>
+        <div class="field"><label>序號（顯示順序）</label><input type="number" id="sif-seq" placeholder="留空自動接續"></div>
+        <div class="field"><label>備援商品名</label><input id="sif-fallback_name" placeholder="藥品集查不到代碼時顯示"></div>
+        <div class="field"><label>備援學名</label><input id="sif-fallback_generic"></div>
+        <div class="field"><label>單次量 / 次劑量 *</label><input id="sif-dose" placeholder="例：1錠 / 0.5錠 / 依體重"></div>
+        <div class="field"><label>頻率 *</label><input id="sif-freq" placeholder="例：A123 / QID / PRN"></div>
+        <div class="field"><label>藥理分類</label><input id="sif-class_label" placeholder="例：抗組織胺"></div>
+      </div>
+      <div class="field"><label>備註</label><input id="sif-note"></div>
+      <div style="font-size:12px;color:var(--text-mute);">頻率填「PRN」的項目會自動歸類到表格下方的備用區。</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('setitem-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveSetItem()">儲存</button>
     </div>
   </div>
 </div>
@@ -726,12 +806,18 @@
       </div>
       <div class="field"><label>健保給付規定</label><textarea id="f-nhi_rule"></textarea></div>
       <div class="field"><label>其他注意事項</label><textarea id="f-notes"></textarea></div>
-      <div class="field">
-        <label>狀態</label>
-        <select id="f-status">
-          <option value="active">啟用中</option>
-          <option value="inactive">已停用</option>
-        </select>
+      <div class="grid-2">
+        <div class="field">
+          <label>狀態</label>
+          <select id="f-status">
+            <option value="active">啟用中</option>
+            <option value="inactive">已停用</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>取代藥品（院內代碼）<span style="font-size:11px;color:#2563eb;">停用時組套自動替換成此藥</span></label>
+          <input id="f-replaced_by" placeholder="例：LCETI2">
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -933,6 +1019,7 @@
     else if (view === 'categories') loadCategoriesTable();
     else if (view === 'admins') loadAdmins();
     else if (view === 'logs') loadLogs();
+    else if (view === 'drugsets') loadDrugSets();
     else if (view === 'medorder') loadMedCodes('med_order');
     else if (view === 'labtest') loadMedCodes('lab_test');
     else if (view === 'diagnosis') loadDxCodes();
@@ -1026,7 +1113,7 @@
      'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
      'elite_usage','grindable','mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
-     'status','photo_url','photo_file_id']
+     'status','replaced_by','photo_url','photo_file_id']
      .forEach(k => { const el = document.getElementById('f-' + k); if (el) el.value = d[k] || (k === 'status' ? 'active' : ''); });
     // 磨粉 toggle 狀態
     setGrind(d.grindable || '');
@@ -1056,7 +1143,7 @@
      'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
      'elite_usage','grindable','mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
-     'status','photo_url','photo_file_id']
+     'status','replaced_by','photo_url','photo_file_id']
      .forEach(k => payload[k] = document.getElementById('f-' + k).value);
     if (!payload.name_zh) return toast('中文商品名必填', 'err');
     if (state.editingDrug) payload.id = state.editingDrug.id;
@@ -1381,6 +1468,139 @@
       await api('deleteMedCode', { source, nhi_code: nhiCode });
       toast('已刪除');
       loadMedCodes(source);
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  // ============ 組套管理 ============
+  const adminSetsState = { sets: [], items: [], current: '', editingSet: null, editingItem: null };
+
+  async function loadDrugSets() {
+    try {
+      const data = await api('exportSets', {});
+      adminSetsState.sets = data.sets || [];
+      adminSetsState.items = data.items || [];
+      if (!adminSetsState.current && adminSetsState.sets.length) {
+        adminSetsState.current = adminSetsState.sets[0].set_code;
+      }
+      const picker = document.getElementById('ds-picker');
+      picker.innerHTML = adminSetsState.sets.map(s =>
+        `<option value="${esc(s.set_code)}" ${s.set_code === adminSetsState.current ? 'selected' : ''}>${esc(s.set_code)} - ${esc(s.set_name)}</option>`
+      ).join('');
+      renderSetItemsTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  document.getElementById('ds-picker').addEventListener('change', e => {
+    adminSetsState.current = e.target.value;
+    renderSetItemsTable();
+  });
+
+  function renderSetItemsTable() {
+    const items = adminSetsState.items
+      .filter(i => i.set_code === adminSetsState.current)
+      .sort((a, b) => (Number(a.seq) || 0) - (Number(b.seq) || 0));
+    const tbody = document.getElementById('ds-tbody');
+    tbody.innerHTML = items.map(it => `
+      <tr>
+        <td>${esc(it.seq)}</td>
+        <td><strong style="font-family:ui-monospace,monospace;color:var(--primary-dark);">${esc(it.drug_code || '')}</strong></td>
+        <td>${esc(it.fallback_name || '')}${it.fallback_generic ? `<br><span style="color:var(--text-mute);font-size:12px">${esc(it.fallback_generic)}</span>` : ''}</td>
+        <td>${esc(it.dose || '')}</td>
+        <td>${String(it.freq).toUpperCase() === 'PRN'
+              ? '<span class="badge" style="background:#ffedd5;color:#c2410c;">PRN</span>'
+              : esc(it.freq || '')}</td>
+        <td>${esc(it.class_label || '')}</td>
+        <td><div class="row-actions">
+          <button onclick='openSetItemEdit(${JSON.stringify(it.seq)})'>編輯</button>
+          <button class="del" onclick='confirmDelSetItem(${JSON.stringify(it.seq)})'>刪除</button>
+        </div></td>
+      </tr>
+    `).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--text-mute);padding:30px;">此組套尚無藥品項目</td></tr>`;
+  }
+
+  function openSetEdit(setCode) {
+    const editing = setCode ? adminSetsState.sets.find(s => s.set_code === setCode) : null;
+    adminSetsState.editingSet = editing;
+    const s = editing || {};
+    document.getElementById('set-modal-title').textContent = setCode ? '編輯組套 ' + setCode : '新增組套';
+    ['set_code','set_name','set_name_en','default_days','special_note','thinking'].forEach(k => {
+      document.getElementById('sf-' + k).value = s[k] || '';
+    });
+    document.getElementById('sf-sort_order').value = s.sort_order || 99;
+    openModal('set-modal');
+  }
+
+  async function saveSet() {
+    const payload = {};
+    ['set_code','set_name','set_name_en','default_days','special_note','thinking'].forEach(k => {
+      payload[k] = document.getElementById('sf-' + k).value;
+    });
+    payload.sort_order = parseInt(document.getElementById('sf-sort_order').value, 10) || 99;
+    payload.set_code = payload.set_code.trim().toUpperCase();
+    if (!payload.set_code || !payload.set_name) return toast('組套代碼與名稱必填', 'err');
+    if (adminSetsState.editingSet) payload._originalCode = adminSetsState.editingSet.set_code;
+    try {
+      await api('saveSet', { set: payload });
+      closeModal('set-modal');
+      toast('儲存成功');
+      adminSetsState.current = payload.set_code;
+      loadDrugSets();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelSet() {
+    const code = adminSetsState.current;
+    if (!code) return;
+    if (!confirm(`確定要刪除組套「${code}」？其所有藥品項目會一併刪除，無法復原`)) return;
+    try {
+      await api('deleteSet', { set_code: code });
+      toast('已刪除');
+      adminSetsState.current = '';
+      loadDrugSets();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  function openSetItemEdit(seq) {
+    if (!adminSetsState.current) return toast('請先選擇組套', 'err');
+    const editing = (seq !== undefined && seq !== null)
+      ? adminSetsState.items.find(i => i.set_code === adminSetsState.current && Number(i.seq) === Number(seq))
+      : null;
+    adminSetsState.editingItem = editing;
+    const it = editing || {};
+    document.getElementById('setitem-modal-title').textContent =
+      (editing ? '編輯' : '新增') + '藥品項目（' + adminSetsState.current + '）';
+    ['drug_code','fallback_name','fallback_generic','dose','freq','class_label','note'].forEach(k => {
+      document.getElementById('sif-' + k).value = it[k] || '';
+    });
+    document.getElementById('sif-seq').value = it.seq || '';
+    openModal('setitem-modal');
+  }
+
+  async function saveSetItem() {
+    const payload = { set_code: adminSetsState.current };
+    ['drug_code','fallback_name','fallback_generic','dose','freq','class_label','note'].forEach(k => {
+      payload[k] = document.getElementById('sif-' + k).value.trim();
+    });
+    const seqVal = document.getElementById('sif-seq').value.trim();
+    if (seqVal) payload.seq = parseInt(seqVal, 10);
+    if (!payload.drug_code && !payload.fallback_name) return toast('請填藥品代碼或名稱', 'err');
+    if (!payload.dose || !payload.freq) return toast('劑量與頻率必填', 'err');
+    payload.drug_code = payload.drug_code.toUpperCase();
+    if (adminSetsState.editingItem) payload._originalSeq = adminSetsState.editingItem.seq;
+    try {
+      await api('saveSetItem', { item: payload });
+      closeModal('setitem-modal');
+      toast('儲存成功');
+      loadDrugSets();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  async function confirmDelSetItem(seq) {
+    if (!confirm('確定要刪除此藥品項目？')) return;
+    try {
+      await api('deleteSetItem', { set_code: adminSetsState.current, seq: seq });
+      toast('已刪除');
+      loadDrugSets();
     } catch (err) { toast(err.message, 'err'); }
   }
 
