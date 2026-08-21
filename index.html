@@ -274,6 +274,12 @@
     background: var(--primary); color: #fff;
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; font-weight: 800; letter-spacing: 1px;
+    transition: background .15s, transform .1s;
+  }
+  .set-head .set-badge.copyable:hover {
+    background: var(--primary-dark) !important; color: #fff !important;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(31,174,159,.35);
   }
   .set-head h2 { margin: 0; font-size: 22px; }
   .set-head .set-en { color: var(--text-mute); font-size: 13px; margin-top: 2px; }
@@ -1298,6 +1304,11 @@
         ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
         li.classList.add('active');
         medState.category = li.dataset.cat;
+        // 選分類時自動清空搜尋文字（分類與搜尋互斥）
+        if (medState.q) {
+          medState.q = '';
+          document.getElementById('med-input').value = '';
+        }
         searchMed();
       });
     });
@@ -1313,6 +1324,13 @@
       if (!medState.categories.length) { buildMedCats(); medState.categories = ['built']; }
 
       const q = medState.q.toLowerCase();
+      // 有搜尋文字 → 全庫搜尋，分類跳回「全部」
+      if (q && medState.category) medState.category = '';
+      if (q) {
+        document.querySelectorAll('#med-cat-list li').forEach(li => {
+          li.classList.toggle('active', li.dataset.cat === '');
+        });
+      }
       const src = medState.source;
       const cat = medState.category;
       const t0 = performance.now();
@@ -1556,6 +1574,11 @@
         ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
         li.classList.add('active');
         dxState.category = li.dataset.cat;
+        // 選分類時自動清空搜尋文字（分類與搜尋互斥）
+        if (dxState.q) {
+          dxState.q = '';
+          document.getElementById('dx-input').value = '';
+        }
         searchDx();
       });
     });
@@ -1580,6 +1603,13 @@
 
     // 本地過濾（瞬間完成）
     const q = dxState.q.toLowerCase();
+    // 有搜尋文字 → 全庫搜尋，分類跳回「全部」
+    if (q && dxState.category) dxState.category = '';
+    if (q) {
+      document.querySelectorAll('#dx-cat-list li').forEach(li => {
+        li.classList.toggle('active', li.dataset.cat === '');
+      });
+    }
     const cat = dxState.category;
     const t0 = performance.now();
     const items = dxState.allItems.filter(it => {
@@ -1783,10 +1813,11 @@
     root.innerHTML = `
       <div class="set-card">
         <div class="set-head">
-          <div class="set-badge">${escapeHtml(s.set_code)}</div>
+          <div class="set-badge copyable" data-copy="${escapeHtml(s.set_code)}" title="雙擊複製組代「${escapeHtml(s.set_code)}」，可貼到看診系統" style="cursor:copy;border-bottom:none;">${escapeHtml(s.set_code)}</div>
           <div>
             <h2>${escapeHtml(s.set_name)}</h2>
             <div class="set-en">${escapeHtml(s.set_name_en || '')}</div>
+            <div style="font-size:11px;color:var(--text-mute);margin-top:2px;">💡 雙擊左側組代可複製</div>
           </div>
           <div class="set-usage">
             看診頁面輸入組代「${escapeHtml(s.set_code)}」即可一鍵帶入<br>
