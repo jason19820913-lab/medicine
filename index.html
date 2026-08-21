@@ -1973,6 +1973,7 @@
     document.getElementById('emp-login').classList.add('hidden');
     document.getElementById('emp-logout-btn').style.display = '';
     document.getElementById('ahk-toggle-wrap').style.display = '';
+    document.title = SITE_TITLE + '（已登入）';   // 讓 AHK 監看能分辨登入頁 vs 已登入
     // 版權警語：每個瀏覽器工作階段顯示一次
     try {
       if (!sessionStorage.getItem('notice_accepted')) {
@@ -1995,6 +1996,7 @@
   function showLogin() {
     document.getElementById('emp-login').classList.remove('hidden');
     document.getElementById('emp-logout-btn').style.display = 'none';
+    document.title = SITE_TITLE;   // 登入頁維持原標題（AHK 監看依此判斷）
     runGoogleGate();   // 啟用 Google 閘門時：先驗證瀏覽器帳號；未啟用：直接顯示員工登入
     setTimeout(() => document.getElementById('emp-id').focus(), 100);
 
@@ -2036,7 +2038,30 @@
   });
 
   // init：有有效 session 直接進入，否則顯示登入頁
-  (function initApp() {
+  (async function initApp() {
+    // === 醫師自動登入 ===
+    // 支援兩種參數：?dr=醫師姓名（AHK 讀展望標題）或 ?drid=員編（展望 URL 變數直接帶）
+    const urlp = new URLSearchParams(location.search);
+    const drName = urlp.get('dr');
+    const drId = urlp.get('drid');
+    const drKey = urlp.get('key');
+    if ((drName || drId) && drKey) {
+      // 先把參數從網址列拿掉（避免書籤/歷史紀錄留下金鑰）
+      try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      try {
+        const data = await api('doctorAutoLogin', { dr_name: drName || '', dr_id: drId || '', key: drKey });
+        localStorage.setItem(EMP_KEY, JSON.stringify({ token: data.token, emp_id: data.emp_id, ts: Date.now() }));
+        try { sessionStorage.removeItem('notice_accepted'); } catch (e) {}
+        showApp();
+        showCopyToast('已以「' + (drName || data.emp_id) + '」身分自動登入');
+        return;
+      } catch (err) {
+        showLogin();
+        document.getElementById('emp-login-err').textContent = err.message;
+        return;
+      }
+    }
+
     const session = getEmpSession();
     if (session) {
       showApp();
