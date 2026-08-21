@@ -948,8 +948,16 @@
           break;
         }
       }
-      throw new Error(lastErr && lastErr.message === '伺服器忙碌中'
-        ? '伺服器忙碌，請稍候再試' : (lastErr ? lastErr.message : '連線失敗'));
+      // Session 過期 → 自動清除並回到登入頁
+      const msg = lastErr ? (lastErr.message || '') : '';
+      if (/過期|未登入|管理員不存在/.test(msg)) {
+        try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+        alert('登入已過期，請重新登入');
+        location.reload();
+        throw new Error('登入已過期');
+      }
+      throw new Error(msg === '伺服器忙碌中'
+        ? '伺服器忙碌，請稍候再試' : (msg || '連線失敗'));
     } finally {
       showLoading(false);
     }
