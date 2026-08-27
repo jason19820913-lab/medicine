@@ -1993,9 +1993,23 @@
     });
   }
 
+  // OCR 誤認校正：把易混淆字元映射到同一標準形（0↔O、1↔I↔L、5↔S、8↔B、2↔Z）
+  function canonCode(s) {
+    return String(s || '').toUpperCase()
+      .replace(/O/g, '0').replace(/[IL]/g, '1').replace(/S/g, '5')
+      .replace(/B/g, '8').replace(/Z/g, '2');
+  }
+
   async function openDrugByCode(code) {
     try {
       await ensureDrugData();
+      // 先用「模糊校正」直接對藥品資料庫比對院內代碼（容忍 OCR 誤認字元）
+      const target = canonCode(code);
+      const fuzzyMatches = (drugAll || []).filter(d =>
+        canonCode(d.product_code) === target && String(d.product_code || '').trim() !== '');
+      if (fuzzyMatches.length === 1) {
+        code = String(fuzzyMatches[0].product_code).trim();   // 校正為正確藥代
+      }
       state.q = code;
       document.getElementById('search-input').value = code;
       await search();
