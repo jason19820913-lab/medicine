@@ -1999,9 +1999,11 @@
       state.q = code;
       document.getElementById('search-input').value = code;
       await search();
-      // 優先找院內代碼完全相符者，直接開詳細頁
-      const exact = state.items.find(d =>
-        String(d.product_code || '').trim().toUpperCase() === String(code).trim().toUpperCase());
+      // 依序比對：院內代碼完全相符 → 英文名完全相符 → 唯一結果，直接開詳細頁
+      const U = String(code).trim().toUpperCase();
+      const exact = state.items.find(d => String(d.product_code || '').trim().toUpperCase() === U)
+        || state.items.find(d => String(d.name_en || '').trim().toUpperCase() === U)
+        || state.items.find(d => String(d.name_en || '').trim().toUpperCase().split(/\s+/)[0] === U);
       if (exact) {
         openDetail(exact.id);
       } else if (state.items.length === 1) {
