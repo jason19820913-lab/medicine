@@ -1984,7 +1984,33 @@
     }
     // 登入後才開始載入資料
     loadCategories();
-    search();
+    search().then(() => {
+      // ?q=藥代：自動搜尋並開啟該藥品詳細頁（展望 Ctrl+右鍵 查仿單）
+      const code = window.__pendingQ;
+      if (!code) return;
+      window.__pendingQ = '';
+      openDrugByCode(code);
+    });
+  }
+
+  async function openDrugByCode(code) {
+    try {
+      await ensureDrugData();
+      state.q = code;
+      document.getElementById('search-input').value = code;
+      await search();
+      // 優先找院內代碼完全相符者，直接開詳細頁
+      const exact = state.items.find(d =>
+        String(d.product_code || '').trim().toUpperCase() === String(code).trim().toUpperCase());
+      if (exact) {
+        openDetail(exact.id);
+      } else if (state.items.length === 1) {
+        openDetail(state.items[0].id);
+      } else if (!state.items.length) {
+        showCopyToast('藥品集查無「' + code + '」');
+      }
+      // 多筆結果就停留在搜尋清單讓使用者自己選
+    } catch (e) {}
   }
 
   function acceptNotice() {
@@ -2041,10 +2067,15 @@
   (async function initApp() {
     // === 醫師自動登入 ===
     // 支援兩種參數：?dr=醫師姓名（AHK 讀展望標題）或 ?drid=員編（展望 URL 變數直接帶）
+    // ?q=藥代：登入後自動搜尋並開啟該藥品詳細頁（展望 Ctrl+右鍵 查仿單用）
     const urlp = new URLSearchParams(location.search);
     const drName = urlp.get('dr');
     const drId = urlp.get('drid');
     const drKey = urlp.get('key');
+    window.__pendingQ = urlp.get('q') || '';
+    if (window.__pendingQ && !(drName || drId)) {
+      try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    }
     if ((drName || drId) && drKey) {
       // 先把參數從網址列拿掉（避免書籤/歷史紀錄留下金鑰）
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
