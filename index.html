@@ -1984,13 +1984,25 @@
     }
     // 登入後才開始載入資料
     loadCategories();
-    search().then(() => {
-      // ?q=藥代：自動搜尋並開啟該藥品詳細頁（展望 Ctrl+右鍵 查仿單）
-      const code = window.__pendingQ;
-      if (!code) return;
-      window.__pendingQ = '';
-      openDrugByCode(code);
-    });
+    // ?q=藥代 與首次搜尋「並行」處理：即使首次 search 失敗也不影響開卡
+    search().catch(() => {}).then(() => { runPendingQ(); });
+  }
+
+  // ?q=藥代：自動搜尋並開啟該藥品詳細頁（展望 中鍵 查仿單）
+  // 重試機制：資料未載入完成 / 伺服器忙碌時自動重試，最多 6 次（約 8 秒）
+  async function runPendingQ() {
+    const code = window.__pendingQ;
+    if (!code) return;
+    window.__pendingQ = '';
+    showCopyToast('查詢藥品「' + code + '」中...');
+    for (let i = 0; i < 6; i++) {
+      let r = null;
+      try { r = await openDrugByCode(code); } catch (e) { r = null; }
+      if (r === 'opened' || r === 'list') return;      // 開卡成功 / 多筆停留清單
+      if (r === 'notfound' && i >= 2) break;           // 資料已載入仍查無 → 提前結束
+      await new Promise(res => setTimeout(res, 1300)); // 資料未就緒 → 稍後重試
+    }
+    showCopyToast('藥品集查無「' + code + '」');
   }
 
   // OCR 誤認校正：把易混淆字元映射到同一標準形（0↔O、1↔I↔L、5↔S、8↔B、2↔Z）
@@ -2000,33 +2012,29 @@
       .replace(/B/g, '8').replace(/Z/g, '2');
   }
 
+  // 回傳：'opened' 已開卡 / 'list' 多筆停留清單 / 'notfound' 資料已載入但查無 / 'notready' 資料未就緒
   async function openDrugByCode(code) {
-    try {
-      await ensureDrugData();
-      // 先用「模糊校正」直接對藥品資料庫比對院內代碼（容忍 OCR 誤認字元）
-      const target = canonCode(code);
-      const fuzzyMatches = (drugAll || []).filter(d =>
-        canonCode(d.product_code) === target && String(d.product_code || '').trim() !== '');
-      if (fuzzyMatches.length === 1) {
-        code = String(fuzzyMatches[0].product_code).trim();   // 校正為正確藥代
-      }
-      state.q = code;
-      document.getElementById('search-input').value = code;
-      await search();
-      // 依序比對：院內代碼完全相符 → 英文名完全相符 → 唯一結果，直接開詳細頁
-      const U = String(code).trim().toUpperCase();
-      const exact = state.items.find(d => String(d.product_code || '').trim().toUpperCase() === U)
-        || state.items.find(d => String(d.name_en || '').trim().toUpperCase() === U)
-        || state.items.find(d => String(d.name_en || '').trim().toUpperCase().split(/\s+/)[0] === U);
-      if (exact) {
-        openDetail(exact.id);
-      } else if (state.items.length === 1) {
-        openDetail(state.items[0].id);
-      } else if (!state.items.length) {
-        showCopyToast('藥品集查無「' + code + '」');
-      }
-      // 多筆結果就停留在搜尋清單讓使用者自己選
-    } catch (e) {}
+    await ensureDrugData();
+    if (!drugAll || !drugAll.length) return 'notready';   // 藥品資料還沒到 → 交給外層重試
+    // 先用「模糊校正」直接對藥品資料庫比對院內代碼（容忍 OCR 誤認字元）
+    const target = canonCode(code);
+    const fuzzyMatches = drugAll.filter(d =>
+      canonCode(d.product_code) === target && String(d.product_code || '').trim() !== '');
+    if (fuzzyMatches.length === 1) {
+      code = String(fuzzyMatches[0].product_code).trim();   // 校正為正確藥代
+    }
+    state.q = code;
+    document.getElementById('search-input').value = code;
+    await search();
+    // 依序比對：院內代碼完全相符 → 英文名完全相符 → 唯一結果，直接開詳細頁
+    const U = String(code).trim().toUpperCase();
+    const exact = state.items.find(d => String(d.product_code || '').trim().toUpperCase() === U)
+      || state.items.find(d => String(d.name_en || '').trim().toUpperCase() === U)
+      || state.items.find(d => String(d.name_en || '').trim().toUpperCase().split(/\s+/)[0] === U);
+    if (exact) { openDetail(exact.id); return 'opened'; }
+    if (state.items.length === 1) { openDetail(state.items[0].id); return 'opened'; }
+    if (state.items.length > 1) return 'list';   // 多筆結果停留在清單讓使用者自己選
+    return 'notfound';
   }
 
   function acceptNotice() {
@@ -2103,6 +2111,8 @@
         showCopyToast('已以「' + (drName || data.emp_id) + '」身分自動登入');
         return;
       } catch (err) {
+        // 自動登入偶發失敗（伺服器忙碌等）：若本機已有有效登入，直接沿用並繼續開卡
+        if (getEmpSession()) { showApp(); return; }
         showLogin();
         document.getElementById('emp-login-err').textContent = err.message;
         return;
