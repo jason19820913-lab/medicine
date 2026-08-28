@@ -2101,6 +2101,8 @@
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
     }
     if ((drName || drId) && drKey) {
+      // 標題先標記「自動登入中」：讓 AHK 登入監看器不要在這段空窗誤判成登入頁而重複導向
+      document.title = SITE_TITLE + '（自動登入中）';
       // 先把參數從網址列拿掉（避免書籤/歷史紀錄留下金鑰）
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
       try {
