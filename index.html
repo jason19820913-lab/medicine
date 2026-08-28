@@ -2005,11 +2005,31 @@
     showCopyToast('藥品集查無「' + code + '」');
   }
 
-  // OCR 誤認校正：把易混淆字元映射到同一標準形（0↔O、1↔I↔L、5↔S、8↔B、2↔Z）
+  // OCR 誤認校正：把易混淆字元映射到同一標準形（0↔O、1↔I↔L、5↔S、8↔B、2↔Z、6↔G）
   function canonCode(s) {
     return String(s || '').toUpperCase()
       .replace(/O/g, '0').replace(/[IL]/g, '1').replace(/S/g, '5')
-      .replace(/B/g, '8').replace(/Z/g, '2');
+      .replace(/B/g, '8').replace(/Z/g, '2').replace(/G/g, '6');
+  }
+
+  // 編輯距離 ≤1 判定：容忍 OCR 漏一字（PRE1→PRED1）、多一字或認錯一字
+  function within1Edit(a, b) {
+    if (a === b) return true;
+    const la = a.length, lb = b.length;
+    if (Math.abs(la - lb) > 1) return false;
+    if (la === lb) {                       // 替換一字
+      let diff = 0;
+      for (let i = 0; i < la; i++) if (a[i] !== b[i] && ++diff > 1) return false;
+      return true;
+    }
+    const s = la < lb ? a : b, l = la < lb ? b : a;   // 短者漏一字
+    let i = 0, j = 0, skipped = false;
+    while (i < s.length && j < l.length) {
+      if (s[i] === l[j]) { i++; j++; }
+      else if (!skipped) { skipped = true; j++; }
+      else return false;
+    }
+    return true;
   }
 
   // 回傳：'opened' 已開卡 / 'list' 多筆停留清單 / 'notfound' 資料已載入但查無 / 'notready' 資料未就緒
@@ -2022,6 +2042,13 @@
       canonCode(d.product_code) === target && String(d.product_code || '').trim() !== '');
     if (fuzzyMatches.length === 1) {
       code = String(fuzzyMatches[0].product_code).trim();   // 校正為正確藥代
+    } else if (!fuzzyMatches.length) {
+      // 第二層容錯：編輯距離 ≤1（OCR 漏一字 PRE1→PRED1、多一字或認錯一字），唯一符合才採用
+      const near = drugAll.filter(d => {
+        const pc = canonCode(String(d.product_code || '').trim());
+        return pc && within1Edit(pc, target);
+      });
+      if (near.length === 1) code = String(near[0].product_code).trim();
     }
     state.q = code;
     document.getElementById('search-input').value = code;
