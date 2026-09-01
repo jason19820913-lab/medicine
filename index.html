@@ -1974,9 +1974,10 @@
     document.getElementById('emp-logout-btn').style.display = '';
     document.getElementById('ahk-toggle-wrap').style.display = '';
     document.title = SITE_TITLE + '（已登入）';   // 讓 AHK 監看能分辨登入頁 vs 已登入
-    // 版權警語：每個瀏覽器工作階段顯示一次
+    // 版權警語：每台電腦 12 小時內只顯示一次（App 模式重開視窗、自動登入都不重複跳）
     try {
-      if (!sessionStorage.getItem('notice_accepted')) {
+      const noticeTs = Number(localStorage.getItem('notice_ts') || 0);
+      if (Date.now() - noticeTs > 12 * 60 * 60 * 1000) {
         document.getElementById('notice-modal').classList.add('show');
       }
     } catch (e) {
@@ -2065,7 +2066,7 @@
   }
 
   function acceptNotice() {
-    try { sessionStorage.setItem('notice_accepted', '1'); } catch (e) {}
+    try { localStorage.setItem('notice_ts', String(Date.now())); } catch (e) {}
     document.getElementById('notice-modal').classList.remove('show');
   }
   window.acceptNotice = acceptNotice;
@@ -2098,7 +2099,6 @@
         google_credential: gateCredential || undefined
       });
       localStorage.setItem(EMP_KEY, JSON.stringify({ token: data.token, emp_id: data.emp_id, ts: Date.now() }));
-      try { sessionStorage.removeItem('notice_accepted'); } catch (e) {}
       showApp();
     } catch (err) {
       errEl.textContent = err.message;
@@ -2135,7 +2135,6 @@
       try {
         const data = await api('doctorAutoLogin', { dr_name: drName || '', dr_id: drId || '', key: drKey });
         localStorage.setItem(EMP_KEY, JSON.stringify({ token: data.token, emp_id: data.emp_id, ts: Date.now() }));
-        try { sessionStorage.removeItem('notice_accepted'); } catch (e) {}
         showApp();
         showCopyToast('已以「' + (drName || data.emp_id) + '」身分自動登入');
         return;
