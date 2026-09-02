@@ -1998,12 +1998,59 @@
     showCopyToast('查詢藥品「' + code + '」中...');
     for (let i = 0; i < 6; i++) {
       let r = null;
-      try { r = await openDrugByCode(code); } catch (e) { r = null; }
+      try { r = await openAnyByCode(code); } catch (e) { r = null; }
       if (r === 'opened' || r === 'list') return;      // 開卡成功 / 多筆停留清單
       if (r === 'notfound' && i >= 2) break;           // 資料已載入仍查無 → 提前結束
       await new Promise(res => setTimeout(res, 1300)); // 資料未就緒 → 稍後重試
     }
-    showCopyToast('藥品集查無「' + code + '」');
+    showCopyToast('查無「' + code + '」（藥品／醫令／診斷皆無此代碼）');
+  }
+
+  function clickTab(tab) {
+    const btn = document.querySelector('#top-tabs button[data-tab="' + tab + '"]');
+    if (btn) btn.click();
+  }
+
+  // 智慧代碼判斷：藥品 → 醫令代碼（診療處置/檢驗自費）→ 診斷代碼，自動切換到對應分頁
+  async function openAnyByCode(code) {
+    const U = String(code).trim().toUpperCase();
+    const noDot = s => String(s || '').trim().toUpperCase().replace(/\./g, '');
+    // 1. 藥品院內代碼完全相符 → 直接開藥卡
+    await ensureDrugData();
+    if (drugAll && drugAll.length &&
+        drugAll.some(d => String(d.product_code || '').trim().toUpperCase() === U)) {
+      return openDrugByCode(code);
+    }
+    // 2. 醫令代碼：院內碼或健保碼完全相符 → 切到醫令代碼分頁搜尋
+    try {
+      await ensureMedData();
+      const medHit = (medState.allItems || []).find(it =>
+        String(it.drug_code || '').trim().toUpperCase() === U ||
+        String(it.nhi_code || '').trim().toUpperCase() === U);
+      if (medHit) {
+        const q = String(medHit.nhi_code || medHit.drug_code || U).trim();
+        medState.q = q;
+        const inp = document.getElementById('med-input'); if (inp) inp.value = q;
+        clickTab('medcodes');
+        await searchMed();
+        return 'opened';
+      }
+    } catch (e) {}
+    // 3. 診斷代碼：ICD 完全相符（容忍小數點差異，J0390 ↔ J03.90）→ 切到診斷代碼分頁
+    try {
+      await ensureDxData();
+      const dxHit = (dxState.allItems || []).find(it => noDot(it.icd_code) === noDot(U));
+      if (dxHit) {
+        const q = String(dxHit.icd_code || U).trim();
+        dxState.q = q;
+        const inp = document.getElementById('dx-input'); if (inp) inp.value = q;
+        clickTab('diagnosis');
+        await searchDx();
+        return 'opened';
+      }
+    } catch (e) {}
+    // 4. 都沒有完全相符 → 走藥品模糊校正（OCR 誤認容錯）
+    return openDrugByCode(code);
   }
 
   // OCR 誤認校正：把易混淆字元映射到同一標準形（0↔O、1↔I↔L、5↔S、8↔B、2↔Z、6↔G）
