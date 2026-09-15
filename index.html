@@ -1017,6 +1017,14 @@
     } catch (e) {}
   }
 
+  // 字頭優先排序：回傳 q 在哪個欄位「開頭符合」（欄位順序即優先權），都沒有回傳 99
+  function prefixRank(fields, q) {
+    for (let i = 0; i < fields.length; i++) {
+      if ((fields[i] || '').toString().toLowerCase().indexOf(q) === 0) return i;
+    }
+    return 99;
+  }
+
   async function search() {
     document.getElementById('count').textContent = '搜尋中...';
     document.getElementById('results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1040,6 +1048,12 @@
         return [d.name_zh, d.name_en, d.generic_name, d.nhi_code, d.product_code, d.category, d.specification]
           .some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
       });
+      // 字頭符合優先：院內代碼 > 英文名 > 中文名 > 學名 > 健保碼 開頭符合者排前面
+      if (q) {
+        state.items.sort((a, b) =>
+          prefixRank([a.product_code, a.name_en, a.name_zh, a.generic_name, a.nhi_code], q) -
+          prefixRank([b.product_code, b.name_en, b.name_zh, b.generic_name, b.nhi_code], q));
+      }
       const t1 = performance.now();
       render(Math.round(t1 - t0));
     } catch (err) {
@@ -1341,6 +1355,12 @@
         return [it.drug_code, it.nhi_code, it.name, it.product_name, it.category]
           .some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
       });
+      // 字頭符合優先：院內碼 > 健保碼 > 名稱 > 商品名 開頭符合者排前面
+      if (q) {
+        matched.sort((a, b) =>
+          prefixRank([a.drug_code, a.nhi_code, a.name, a.product_name], q) -
+          prefixRank([b.drug_code, b.nhi_code, b.name, b.product_name], q));
+      }
       const t1 = performance.now();
       medState.items = matched.slice(0, 3000);
       renderMed(matched.length, Math.round(t1 - t0));
@@ -1621,6 +1641,12 @@
       if ((it.category || '').toLowerCase().indexOf(q) !== -1) return true;
       return false;
     });
+    // 字頭符合優先：ICD 代碼 > 中文名 > 英文名 開頭符合者排前面
+    if (q) {
+      items.sort((a, b) =>
+        prefixRank([a.icd_code, a.name, a.name_en], q) -
+        prefixRank([b.icd_code, b.name, b.name_en], q));
+    }
     const t1 = performance.now();
     dxState.items = items.slice(0, 3000);   // 前 3000 筆顯示（避免 DOM 過重）
     renderDx(items.length, Math.round(t1 - t0));
