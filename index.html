@@ -1025,6 +1025,18 @@
     return 99;
   }
 
+  // 字頭優先 + 字母順序 比較器：
+  // 1. 開頭符合的欄位優先權（越前面的欄位越優先）
+  // 2. 同優先權 → 依「符合欄位的內容」字母順序排（B → BA → BE → BI...）
+  function prefixCompare(fieldsA, fieldsB, q) {
+    const ra = prefixRank(fieldsA, q);
+    const rb = prefixRank(fieldsB, q);
+    if (ra !== rb) return ra - rb;
+    const ka = ((ra < 99 ? fieldsA[ra] : fieldsA[0]) || '').toString().toLowerCase();
+    const kb = ((rb < 99 ? fieldsB[rb] : fieldsB[0]) || '').toString().toLowerCase();
+    return ka.localeCompare(kb, 'en');
+  }
+
   async function search() {
     document.getElementById('count').textContent = '搜尋中...';
     document.getElementById('results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1048,11 +1060,11 @@
         return [d.name_zh, d.name_en, d.generic_name, d.nhi_code, d.product_code, d.category, d.specification]
           .some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
       });
-      // 字頭符合優先：院內代碼 > 英文名 > 中文名 > 學名 > 健保碼 開頭符合者排前面
+      // 字頭符合優先（院內代碼 > 英文名 > 中文名 > 學名 > 健保碼），同級再按字母順序
       if (q) {
-        state.items.sort((a, b) =>
-          prefixRank([a.product_code, a.name_en, a.name_zh, a.generic_name, a.nhi_code], q) -
-          prefixRank([b.product_code, b.name_en, b.name_zh, b.generic_name, b.nhi_code], q));
+        state.items.sort((a, b) => prefixCompare(
+          [a.product_code, a.name_en, a.name_zh, a.generic_name, a.nhi_code],
+          [b.product_code, b.name_en, b.name_zh, b.generic_name, b.nhi_code], q));
       }
       const t1 = performance.now();
       render(Math.round(t1 - t0));
@@ -1355,11 +1367,11 @@
         return [it.drug_code, it.nhi_code, it.name, it.product_name, it.category]
           .some(f => (f || '').toString().toLowerCase().indexOf(q) !== -1);
       });
-      // 字頭符合優先：院內碼 > 健保碼 > 名稱 > 商品名 開頭符合者排前面
+      // 字頭符合優先（院內碼 > 健保碼 > 名稱 > 商品名），同級再按字母順序
       if (q) {
-        matched.sort((a, b) =>
-          prefixRank([a.drug_code, a.nhi_code, a.name, a.product_name], q) -
-          prefixRank([b.drug_code, b.nhi_code, b.name, b.product_name], q));
+        matched.sort((a, b) => prefixCompare(
+          [a.drug_code, a.nhi_code, a.name, a.product_name],
+          [b.drug_code, b.nhi_code, b.name, b.product_name], q));
       }
       const t1 = performance.now();
       medState.items = matched.slice(0, 3000);
@@ -1641,11 +1653,11 @@
       if ((it.category || '').toLowerCase().indexOf(q) !== -1) return true;
       return false;
     });
-    // 字頭符合優先：ICD 代碼 > 中文名 > 英文名 開頭符合者排前面
+    // 字頭符合優先（ICD 代碼 > 中文名 > 英文名），同級再按字母順序
     if (q) {
-      items.sort((a, b) =>
-        prefixRank([a.icd_code, a.name, a.name_en], q) -
-        prefixRank([b.icd_code, b.name, b.name_en], q));
+      items.sort((a, b) => prefixCompare(
+        [a.icd_code, a.name, a.name_en],
+        [b.icd_code, b.name, b.name_en], q));
     }
     const t1 = performance.now();
     dxState.items = items.slice(0, 3000);   // 前 3000 筆顯示（避免 DOM 過重）
