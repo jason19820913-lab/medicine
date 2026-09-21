@@ -406,6 +406,7 @@
       <a data-view="labtest">檢驗及自費代碼</a>
       <a data-view="diagnosis">診斷代碼</a>
       <a data-view="medcats">代碼分類</a>
+      <a data-view="rules">給藥規則</a>
       <div style="padding:8px 20px 4px;font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-top:4px;">系統</div>
       <a data-view="admins" id="nav-admins">管理員</a>
       <a data-view="logs" id="nav-logs">操作紀錄</a>
@@ -461,6 +462,20 @@
         <table>
           <thead><tr><th>分類名稱</th><th>排序</th><th>建立時間</th><th style="width:140px"></th></tr></thead>
           <tbody id="cat-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 給藥規則 -->
+    <div class="view hidden" id="view-rules">
+      <div class="page-header">
+        <h2>給藥規則</h2>
+        <button class="btn btn-primary" onclick="openRuleEdit()">＋ 新增規則</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:60px">群組排序</th><th>群組</th><th>內容</th><th style="width:60px">條目排序</th><th style="width:140px"></th></tr></thead>
+          <tbody id="rules-tbody"></tbody>
         </table>
       </div>
     </div>
@@ -829,6 +844,25 @@
 </div>
 
 <!-- 分類編輯 modal -->
+<div class="modal-mask" id="rule-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h3 id="rule-modal-title">新增規則</h3>
+      <button class="close" onclick="closeModal('rule-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>群組名稱 *</label><input id="rf-group_name" placeholder="例：錠劑"></div>
+      <div class="field"><label>群組排序</label><input id="rf-group_sort" type="number" value="1" placeholder="同群組請填相同數字，決定群組先後"></div>
+      <div class="field"><label>內容 *</label><textarea id="rf-content" rows="3" placeholder="規則內容（一筆一條）"></textarea></div>
+      <div class="field"><label>條目排序</label><input id="rf-item_sort" type="number" value="1" placeholder="群組內條目的先後"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('rule-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveRule()">儲存</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-mask" id="cat-modal">
   <div class="modal">
     <div class="modal-head">
@@ -1033,6 +1067,7 @@
     else if (view === 'labtest') loadMedCodes('lab_test');
     else if (view === 'diagnosis') loadDxCodes();
     else if (view === 'medcats') loadMedCatsTable();
+    else if (view === 'rules') loadRulesTable();
     toggleDrawer(false);
   }
 
@@ -1217,6 +1252,67 @@
         state.categories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
     } catch (err) {}
   }
+
+  // ============ 給藥規則 ============
+  async function loadRulesTable() {
+    try {
+      const data = await api('listRules');
+      state.rules = data.items || [];
+      const tbody = document.getElementById('rules-tbody');
+      tbody.innerHTML = state.rules.map(r => `
+        <tr>
+          <td>${esc(r.group_sort)}</td>
+          <td><strong>${esc(r.group_name)}</strong></td>
+          <td style="white-space:normal;max-width:420px">${esc(r.content)}</td>
+          <td>${esc(r.item_sort)}</td>
+          <td><div class="row-actions">
+            <button onclick='openRuleEdit(${JSON.stringify(r.id)})'>編輯</button>
+            <button class="del" onclick='confirmDelRule(${JSON.stringify(r.id)})'>刪除</button>
+          </div></td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="color:#888">尚無資料（可在 Apps Script 執行 initDosingRules 建立範本）</td></tr>';
+    } catch (err) { toast(err.message, 'err'); }
+  }
+
+  function openRuleEdit(id) {
+    state.editingRule = id ? (state.rules || []).find(r => r.id === id) : null;
+    const r = state.editingRule || {};
+    document.getElementById('rule-modal-title').textContent = id ? '編輯規則' : '新增規則';
+    document.getElementById('rf-group_name').value = r.group_name || '';
+    document.getElementById('rf-group_sort').value = r.group_sort || 1;
+    document.getElementById('rf-content').value = r.content || '';
+    document.getElementById('rf-item_sort').value = r.item_sort || 1;
+    openModal('rule-modal');
+  }
+  window.openRuleEdit = openRuleEdit;
+
+  async function saveRule() {
+    const rule = {
+      group_name: document.getElementById('rf-group_name').value.trim(),
+      group_sort: parseInt(document.getElementById('rf-group_sort').value, 10) || 1,
+      content: document.getElementById('rf-content').value.trim(),
+      item_sort: parseInt(document.getElementById('rf-item_sort').value, 10) || 1
+    };
+    if (!rule.group_name || !rule.content) return toast('群組名稱與內容必填', 'err');
+    if (state.editingRule) rule.id = state.editingRule.id;
+    try {
+      await api('saveRule', { rule });
+      toast('已儲存');
+      closeModal('rule-modal');
+      loadRulesTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+  window.saveRule = saveRule;
+
+  async function confirmDelRule(id) {
+    if (!confirm('確定刪除這條規則？')) return;
+    try {
+      await api('deleteRule', { id });
+      toast('已刪除');
+      loadRulesTable();
+    } catch (err) { toast(err.message, 'err'); }
+  }
+  window.confirmDelRule = confirmDelRule;
 
   async function loadCategoriesTable() {
     await loadCategories();
