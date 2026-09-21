@@ -183,6 +183,12 @@
     letter-spacing: .3px;
   }
   .drug-card .info .name-zh { font-weight: 600; font-size: 16px; color: var(--text); }
+  .drug-card .info .name-price {
+    margin-left: auto;                 /* 置右對齊 */
+    font-size: 13px; font-weight: 700; color: #C25E00;
+    background: #FFF3E4; border-radius: 999px; padding: 2px 10px;
+    white-space: nowrap;
+  }
   .drug-card .info .name-row.has-code .name-zh {
     font-size: 14px; font-weight: 500; color: var(--text-mute);
   }
@@ -1100,6 +1106,7 @@
           <div class="name-row ${d.product_code ? 'has-code' : ''}">
             ${d.product_code ? `<div class="name-code">${escapeHtml(d.product_code)}</div>` : ''}
             <div class="name-zh">${escapeHtml(d.name_zh || '')}</div>
+            ${String(d.self_price || '').trim() !== '' ? `<div class="name-price">自費 $${escapeHtml(String(d.self_price).trim())}</div>` : ''}
           </div>
           <div class="name-en">${escapeHtml(d.name_en || '')}</div>
           <div class="meta">
