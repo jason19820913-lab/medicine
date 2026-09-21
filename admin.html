@@ -759,6 +759,7 @@
         <div class="field"><label>劑型</label><input id="f-dosage_form" placeholder="錠劑 / 膠囊..."></div>
         <div class="field"><label>含量</label><input id="f-strength" placeholder="100mg"></div>
         <div class="field"><label>規格</label><input id="f-specification" placeholder="例：100mg/Tab，30 顆/瓶"></div>
+        <div class="field"><label>自費價</label><input id="f-self_price" placeholder="例：150（留空則前台不顯示）"></div>
       </div>
 
       <h4 class="form-sec">外觀辨識</h4>
@@ -1121,7 +1122,7 @@
      'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
      'elite_usage','grindable','mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
-     'status','replaced_by','photo_url','photo_file_id']
+     'status','replaced_by','photo_url','photo_file_id','self_price']
      .forEach(k => { const el = document.getElementById('f-' + k); if (el) el.value = d[k] || (k === 'status' ? 'active' : ''); });
     // 磨粉 toggle 狀態
     setGrind(d.grindable || '');
@@ -1151,7 +1152,7 @@
      'manufacturer','dosage_form','strength','specification','color','shape','marking','scoring',
      'elite_usage','grindable','mechanism','indications','dosage','max_dose','side_effects',
      'contraindications','interactions','pregnancy_category','storage','nhi_rule','notes',
-     'status','replaced_by','photo_url','photo_file_id']
+     'status','replaced_by','photo_url','photo_file_id','self_price']
      .forEach(k => payload[k] = document.getElementById('f-' + k).value);
     if (!payload.name_zh) return toast('中文商品名必填', 'err');
     if (state.editingDrug) payload.id = state.editingDrug.id;
