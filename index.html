@@ -434,6 +434,31 @@
 
   /* 分頁面板 */
   .tab-panel.hidden { display: none; }
+  /* 給藥規則 */
+  .rules-wrap { max-width: 880px; margin: 0 auto; }
+  .rules-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .rules-header h2 { font-size: 22px; color: var(--text); margin: 0; }
+  .rules-bar { width: 6px; height: 24px; border-radius: 3px; background: var(--primary); display: inline-block; }
+  .rule-card {
+    background: #fff; border-radius: 16px; padding: 20px 24px; margin-bottom: 16px;
+    box-shadow: 0 2px 10px rgba(14,90,83,.06);
+  }
+  .rule-card .rule-title { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .rule-card .rule-num {
+    width: 34px; height: 34px; border-radius: 10px; background: var(--primary);
+    color: #fff; font-weight: 700; font-size: 16px;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .rule-card .rule-name { font-size: 18px; font-weight: 700; color: var(--text); }
+  .rule-card ul { list-style: none; margin: 0; padding: 0; }
+  .rule-card li {
+    position: relative; padding: 6px 0 6px 26px;
+    font-size: 15px; line-height: 1.7; color: var(--text);
+  }
+  .rule-card li::before {
+    content: '▲'; position: absolute; left: 4px; top: 7px;
+    font-size: 11px; color: var(--primary);
+  }
 
   /* 醫令來源切換 */
   .source-toggle {
@@ -767,6 +792,7 @@
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <div class="tabs" id="top-tabs">
         <button data-tab="drugs" class="active">藥品</button>
+        <button data-tab="rules">給藥規則</button>
         <button data-tab="sets">組套</button>
         <button data-tab="medcodes">醫令代碼</button>
         <button data-tab="diagnosis">診斷代碼</button>
@@ -892,6 +918,22 @@
         <a class="admin-link" onclick="reloadSetsData()" style="cursor:pointer;">🔄 重新載入</a>
       </div>
       <div id="set-content"></div>
+    </div>
+  </main>
+</div>
+
+<!-- 給藥規則分頁 -->
+<div class="tab-panel hidden" id="tab-rules">
+  <main>
+    <div class="container" style="padding:24px 20px;">
+      <div class="rules-wrap">
+        <div class="rules-header">
+          <span class="rules-bar"></span>
+          <h2>給藥規則</h2>
+          <a class="admin-link" onclick="reloadRulesData()" style="cursor:pointer;margin-left:auto;font-size:13px;">🔄 重新載入</a>
+        </div>
+        <div id="rules-body"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
     </div>
   </main>
 </div>
@@ -1904,6 +1946,70 @@
   }
   window.reloadSetsData = reloadSetsData;
 
+  // ============ 給藥規則 ============
+  const rulesState = { items: [], dataReady: false };
+  const RULES_CACHE_KEY = 'rules_v1';
+  const RULES_CACHE_TTL = 30 * 60 * 1000;   // 30 分鐘
+
+  async function loadRulesTab(force) {
+    const body = document.getElementById('rules-body');
+    try {
+      let items = null;
+      if (!force) {
+        try {
+          const raw = localStorage.getItem(RULES_CACHE_KEY);
+          if (raw) {
+            const c = JSON.parse(raw);
+            if (c && c.items && (Date.now() - c.ts < RULES_CACHE_TTL)) items = c.items;
+          }
+        } catch (e) {}
+      }
+      if (!items) {
+        const data = await api('listRules');
+        items = data.items || [];
+        try { localStorage.setItem(RULES_CACHE_KEY, JSON.stringify({ items, ts: Date.now() })); } catch (e) {}
+      }
+      rulesState.items = items;
+      rulesState.dataReady = true;
+      renderRules();
+    } catch (err) {
+      body.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div>' + escapeHtml(err.message) + '</div></div>';
+    }
+  }
+
+  async function reloadRulesData() {
+    try { localStorage.removeItem(RULES_CACHE_KEY); } catch (e) {}
+    document.getElementById('rules-body').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    await loadRulesTab(true);
+  }
+  window.reloadRulesData = reloadRulesData;
+
+  function renderRules() {
+    const body = document.getElementById('rules-body');
+    if (!rulesState.items.length) {
+      body.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>尚未建立給藥規則（請至後台維護）</div></div>';
+      return;
+    }
+    // 依 group_sort 分組（後端已排序）
+    const groups = [];
+    const seen = {};
+    rulesState.items.forEach(r => {
+      const g = String(r.group_name || '').trim();
+      if (!g) return;
+      if (!(g in seen)) { seen[g] = groups.length; groups.push({ name: g, items: [] }); }
+      groups[seen[g]].items.push(r);
+    });
+    body.innerHTML = groups.map((g, i) => `
+      <div class="rule-card">
+        <div class="rule-title">
+          <div class="rule-num">${i + 1}</div>
+          <div class="rule-name">${escapeHtml(g.name)}</div>
+        </div>
+        <ul>${g.items.map(r => `<li>${escapeHtml(r.content || '')}</li>`).join('')}</ul>
+      </div>
+    `).join('');
+  }
+
   // ============ 頁籤切換 ============
   document.getElementById('top-tabs').addEventListener('click', e => {
     if (e.target.tagName !== 'BUTTON') return;
@@ -1920,6 +2026,9 @@
     }
     if (tab === 'sets' && !setsState.dataReady) {
       loadSetsTab();
+    }
+    if (tab === 'rules' && !rulesState.dataReady) {
+      loadRulesTab();
     }
   });
 
